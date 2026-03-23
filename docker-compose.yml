@@ -1,0 +1,56 @@
+name: reverse-recipe
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: reverse_recipe_db
+    environment:
+      POSTGRES_DB: reverse_recipe
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reverse_recipe_api
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: reverse_recipe
+      DB_USER: postgres
+      DB_PASSWORD: password
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      PERPLEXITY_API_KEY: ${PERPLEXITY_API_KEY:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: reverse_recipe_web
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

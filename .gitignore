@@ -1,0 +1,35 @@
+# 의존성
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# 빌드 결과물
+frontend/dist/
+backend/dist/
+
+# 환경변수 (API 키 등 민감정보)
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# 데이터베이스 (로컬 사용자 데이터)
+*.db
+*.sqlite
+*.sqlite3
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# 로그
+*.log
+npm-debug.log*
+
+# 에디터
+.vscode/
+.idea/
+*.swp
+
+# Claude Code 설정 (로컬 전용)
+.claude/
