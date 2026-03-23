@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* ── Light Mode (default) ────────────────────────── */
+:root {
+  --primary: #16A34A;
+  --primary-dark: #15803D;
+  --primary-light: #F0FDF4;
+  --primary-medium: #DCFCE7;
+  --accent: #F97316;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+
+  --bg: #F9FAFB;
+  --surface: #FFFFFF;
+  --surface-2: #F3F4F6;
+  --surface-3: #F9FAFB;
+  --border: #E5E7EB;
+  --border-light: #F3F4F6;
+
+  --text: #111827;
+  --text-muted: #6B7280;
+  --text-subtle: #9CA3AF;
+
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-nav: rgba(255, 255, 255, 0.96);
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.04);
+}
+
+/* ── Dark Mode ───────────────────────────────────── */
+[data-theme="dark"] {
+  --primary: #4ADE80;
+  --primary-dark: #22C55E;
+  --primary-light: rgba(74, 222, 128, 0.12);
+  --primary-medium: rgba(74, 222, 128, 0.22);
+  --accent: #FB923C;
+  --danger: #F87171;
+  --warning: #FBBF24;
+
+  --bg: #0F172A;
+  --surface: #1E293B;
+  --surface-2: #253347;
+  --surface-3: #1A2840;
+  --border: #334155;
+  --border-light: #2D3F55;
+
+  --text: #F1F5F9;
+  --text-muted: #94A3B8;
+  --text-subtle: #64748B;
+
+  --glass-bg: rgba(30, 41, 59, 0.94);
+  --glass-nav: rgba(15, 23, 42, 0.97);
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+[data-theme="dark"] body {
+  background-color: #0A0F1E;
+}
+
+[data-theme="dark"] #root {
+  background: var(--bg);
+  box-shadow: 0 0 60px rgba(0,0,0,0.5);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* 데스크탑에서 모바일 앱처럼 중앙 정렬 */
+body {
+  font-family: 'Noto Sans KR', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #E5E7EB;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 앱 컨테이너 */
+#root {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--bg);
+  box-shadow: 0 0 40px rgba(0,0,0,0.12);
+  position: relative;
+}
+
+button, a, [role="button"] {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+html { scroll-behavior: smooth; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+}
+
+@keyframes pulse-timer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.timer-active { animation: pulse-timer 1s infinite; }
+
+.recipe-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.recipe-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.badge-red { background: #FEE2E2; color: #DC2626; }
+.badge-yellow { background: #FEF9C3; color: #CA8A04; }
+.badge-green { background: #DCFCE7; color: #16A34A; }
+
+[data-theme="dark"] .badge-red { background: rgba(248,113,113,0.15); color: #F87171; }
+[data-theme="dark"] .badge-yellow { background: rgba(251,191,36,0.15); color: #FBBF24; }
+[data-theme="dark"] .badge-green { background: rgba(52,211,153,0.15); color: #34D399; }
+
+/* 토스 스타일 바텀시트 */
+.bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 100;
+  backdrop-filter: blur(2px);
+}
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  /* left 포지셔닝으로 translateX(-50%) 제거 — Framer Motion y-transform과 충돌 방지 */
+  left: max(0px, calc((100vw - 430px) / 2));
+  width: min(100vw, 430px);
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  z-index: 101;
+  padding: 24px 20px 36px;
+}
