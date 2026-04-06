@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>리버스레시피 간트차트</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1e1e2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  }
+
+  /* 16:9 슬라이드 */
+  .slide {
+    width: 960px;
+    height: 540px;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  /* 헤더 */
+  .header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    padding: 13px 40px 11px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left h1 {
+    color: white;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .header-left p {
+    color: rgba(255,255,255,0.55);
+    font-size: 10px;
+    margin-top: 2px;
+  }
+  .legend {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.75);
+  }
+  .legend-dot {
+    width: 9px; height: 9px;
+    border-radius: 3px;
+  }
+  .d-done   { background: #10b981; }
+  .d-cur    { background: #f59e0b; }
+  .d-plan   { background: #64748b; }
+
+  /* 본문 */
+  .body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* 왼쪽 작업명 열 */
+  .col-tasks {
+    width: 158px;
+    flex-shrink: 0;
+    border-right: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    padding-top: 28px; /* 주차 헤더 높이만큼 */
+  }
+
+  /* 오른쪽 간트 영역 */
+  .col-gantt {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 주차 헤더 행 */
+  .week-header {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    height: 28px;
+    flex-shrink: 0;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  .week-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    border-right: 1px solid #e5e7eb;
+    gap: 4px;
+  }
+  .week-cell:last-child { border-right: none; }
+  .week-cell.active {
+    background: #fef3c7;
+    color: #d97706;
+  }
+  .week-cell .sub {
+    font-weight: 400;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .week-cell.active .sub { color: #d97706; opacity: 0.7; }
+
+  /* 섹션 구분 헤더 */
+  .section-label {
+    height: 16px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
+  .gantt-section-label {
+    height: 16px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+  }
+  .gantt-section-label > div {
+    border-right: 1px solid #e5e7eb;
+  }
+  .gantt-section-label > div:last-child { border-right: none; }
+
+  /* 작업 행 */
+  .task-row {
+    height: 25px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+  }
+  .task-name {
+    font-size: 10.5px;
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .gantt-row {
+    height: 25px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+  }
+  .gantt-cell {
+    border-right: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    padding: 3px 5px;
+  }
+  .gantt-cell:last-child { border-right: none; }
+  .bar {
+    height: 16px;
+    border-radius: 4px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: white;
+  }
+  .bar.done { background: #10b981; }
+  .bar.cur  { background: #f59e0b; }
+  .bar.plan { background: #cbd5e1; color: #94a3b8; }
+
+  /* 하단 요약 */
+  .footer {
+    height: 58px;
+    flex-shrink: 0;
+    display: flex;
+    gap: 0;
+    border-top: 2px solid #e5e7eb;
+  }
+  .footer-card {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px;
+    border-right: 1px solid #e5e7eb;
+  }
+  .footer-card:last-child { border-right: none; }
+  .footer-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .footer-text .ft-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 2px;
+  }
+  .footer-text .ft-items {
+    font-size: 9.5px;
+    color: #64748b;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- 헤더 -->
+  <div class="header">
+    <div class="header-left">
+      <h1>리버스레시피 — 4주 개발 간트차트</h1>
+      <p>개인 프로젝트 · 2026년 3월 기준</p>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot d-done"></div>완료</div>
+      <div class="legend-item"><div class="legend-dot d-cur"></div>현재 진행</div>
+      <div class="legend-item"><div class="legend-dot d-plan"></div>예정</div>
+    </div>
+  </div>
+
+  <!-- 본문 -->
+  <div class="body">
+
+    <!-- 작업명 열 -->
+    <div class="col-tasks">
+      <!-- 1주차 섹션 -->
+      <div class="section-label">1주차 · 분석·설계</div>
+      <div class="task-row"><span class="task-name">요구사항 분석</span></div>
+      <div class="task-row"><span class="task-name">DB 테이블 설계</span></div>
+      <div class="task-row"><span class="task-name">REST API 설계</span></div>
+      <!-- 2주차 섹션 -->
+      <div class="section-label">2주차 · 백엔드</div>
+      <div class="task-row"><span class="task-name">Express 서버 구축</span></div>
+      <div class="task-row"><span class="task-name">SQLite DB 구현</span></div>
+      <div class="task-row"><span class="task-name">인증(JWT) API</span></div>
+      <div class="task-row"><span class="task-name">냉장고 재료 API</span></div>
+      <!-- 3주차 섹션 -->
+      <div class="section-label">3주차 · 프론트엔드</div>
+      <div class="task-row"><span class="task-name">React UI 개발</span></div>
+      <div class="task-row"><span class="task-name">프론트·백엔드 연동</span></div>
+      <div class="task-row"><span class="task-name">식재료 자동완성 DB</span></div>
+      <!-- 4주차 섹션 -->
+      <div class="section-label">4주차 · AI·마무리</div>
+      <div class="task-row"><span class="task-name">AI 레시피 추천 연동</span></div>
+      <div class="task-row"><span class="task-name">베타 테스트</span></div>
+      <div class="task-row"><span class="task-name">최종 보고서 작성</span></div>
+    </div>
+
+    <!-- 간트 영역 -->
+    <div class="col-gantt">
+      <!-- 주차 헤더 -->
+      <div class="week-header">
+        <div class="week-cell">1주차 <span class="sub">분석·설계</span></div>
+        <div class="week-cell">2주차 <span class="sub">백엔드</span></div>
+        <div class="week-cell">3주차 <span class="sub">프론트엔드</span></div>
+        <div class="week-cell active">4주차 ← 현재 <span class="sub">AI·마무리</span></div>
+      </div>
+
+      <!-- 1주차 작업 -->
+      <div class="gantt-section-label"><div></div><div></div><div></div><div></div></div>
+      <div class="gantt-row">
+        <div class="gantt-cell"><div class="bar done">✓</div></div>
+        <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-cell"><div class="bar done">✓</div></div>
+        <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-cell"><div class="bar done">✓</div></div>
+        <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      </div>
+
+      <!-- 2주차 작업 -->
+      <div class="gantt-section-label"><div></div><div></div><div></div><div></div></div>
+      <div class="gantt-row">
+        <div class="gantt-cell"></div>
+        <div class="gantt-cell"><div class="bar done">✓</div></div>
+        <div class="gantt-cell"></div><div class="gantt-cell"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-cell"></div>
+        <div class="gantt-cell"><div class="bar done">✓</div></div>
+        <div class="gantt-cell"></div><div class="gantt-cell"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-cell"></div>
+        <div class="gantt-cell"><div class="bar done">✓</div></div>
+        <div class="gantt-cell"></div><div class="gantt-cell"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-cell"></div>
+        <div class="gantt-cell"><div class="bar done">✓</div></div>
+        <div class="gantt-cell"></div><div class="gantt-cell"></div>
+      </div>
+
+      <!-- 3주차 작업 -->
+      <div class="gantt-section-label"><div></div><div></div><div></div><div></div></div>
+      <div class="gantt-row">
+        <div class="gantt-cell"></div><div class="gantt-cell"></div>
+        <div class="gantt-cell"><div class="bar done">✓</div></div>
+        <div class="gantt-cell"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-cell"></div><div class="gantt-cell"></div>
+        <div class="gantt-cell"><div class="bar done">✓</div></div>
+        <div class="gantt-cell"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-cell"></div><div class="gantt-cell"></div>
+        <div class="gantt-cell"><div class="bar done">✓</div></div>
+        <div class="gantt-cell"></div>
+      </div>
+
+      <!-- 4주차 작업 -->
+      <div class="gantt-section-label"><div></div><div></div><div></div><div></div></div>
+      <div class="gantt-row">
+        <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+        <div class="gantt-cell"><div class="bar cur">→</div></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+        <div class="gantt-cell"><div class="bar cur">→</div></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+        <div class="gantt-cell"><div class="bar cur">→</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 요약 -->
+  <div class="footer">
+    <div class="footer-card">
+      <div class="footer-icon">✅</div>
+      <div class="footer-text">
+        <div class="ft-title">완료 (1~3주차)</div>
+        <div class="ft-items">요구사항·DB·API 설계 / Express + SQLite 서버 / JWT 인증 / React UI / 백엔드 연동 / 식재료 DB(230개+)</div>
+      </div>
+    </div>
+    <div class="footer-card">
+      <div class="footer-icon">🔄</div>
+      <div class="footer-text">
+        <div class="ft-title">현재 진행 (4주차)</div>
+        <div class="ft-items">Perplexity AI 레시피 추천 연동 / 실기기 베타 테스트 / 최종 보고서 작성</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>3주차 핵심 목표</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1e1e2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  }
+
+  /* 슬라이드 비율 16:9 */
+  .slide {
+    width: 960px;
+    height: 540px;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  /* 상단 헤더 */
+  .header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    padding: 28px 48px 22px;
+    flex-shrink: 0;
+  }
+  .header .week-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.25);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    color: white;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .header p {
+    color: rgba(255,255,255,0.8);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  /* 카드 영역 */
+  .cards {
+    display: flex;
+    gap: 0;
+    flex: 1;
+    padding: 32px 40px;
+    gap: 20px;
+  }
+
+  .card {
+    flex: 1;
+    border-radius: 14px;
+    padding: 24px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1.5px solid #e5e7eb;
+    background: #fafafa;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    border-radius: 14px 14px 0 0;
+  }
+  .card:nth-child(1)::before { background: #10b981; }
+  .card:nth-child(2)::before { background: #3b82f6; }
+  .card:nth-child(3)::before { background: #f59e0b; }
+
+  .card-number {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+  .card:nth-child(1) .card-number { color: #10b981; }
+  .card:nth-child(2) .card-number { color: #3b82f6; }
+  .card:nth-child(3) .card-number { color: #f59e0b; }
+
+  .card-icon {
+    font-size: 28px;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.3;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.7;
+    flex: 1;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 4px;
+  }
+  .tag {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .card:nth-child(1) .tag { background: #d1fae5; color: #065f46; }
+  .card:nth-child(2) .tag { background: #dbeafe; color: #1e40af; }
+  .card:nth-child(3) .tag { background: #fef3c7; color: #92400e; }
+
+  /* 하단 */
+  .footer {
+    padding: 0 48px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .footer-note {
+    font-size: 11px;
+    color: #9ca3af;
+  }
+  .footer-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #10b981;
+    font-weight: 700;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <div class="header">
+    <div class="week-badge">WEEK 3</div>
+    <h1>프론트엔드 개발 — 3가지 핵심 목표</h1>
+    <p>사용자가 직접 만지는 화면과 데이터 흐름을 완성한다</p>
+  </div>
+
+  <div class="cards">
+
+    <!-- 카드 1 -->
+    <div class="card">
+      <div class="card-number">GOAL 01</div>
+      <div class="card-icon">🖥️</div>
+      <div class="card-title">React UI 화면 구현</div>
+      <div class="card-desc">
+        사용자가 실제로 사용할 5개 화면을 React로 개발한다.
+        홈·냉장고·레시피 추천·장보기·마이페이지로 구성되며,
+        모바일에서도 자연스럽게 작동하는 반응형 레이아웃을 적용한다.
+      </div>
+      <div class="card-tags">
+        <span class="tag">React</span>
+        <span class="tag">Tailwind CSS</span>
+        <span class="tag">모바일 최적화</span>
+      </div>
+    </div>
+
+    <!-- 카드 2 -->
+    <div class="card">
+      <div class="card-number">GOAL 02</div>
+      <div class="card-icon">🔗</div>
+      <div class="card-title">프론트 ↔ 백엔드 API 연동</div>
+      <div class="card-desc">
+        2주차에 만든 REST API와 화면을 실제로 연결한다.
+        로그인 시 JWT 토큰을 저장하고, 이후 냉장고 재료 조회·추가·삭제가
+        DB에 즉시 반영되는 실시간 데이터 흐름을 구현한다.
+      </div>
+      <div class="card-tags">
+        <span class="tag">JWT 인증</span>
+        <span class="tag">Axios</span>
+        <span class="tag">Zustand 상태관리</span>
+      </div>
+    </div>
+
+    <!-- 카드 3 -->
+    <div class="card">
+      <div class="card-number">GOAL 03</div>
+      <div class="card-icon">🔍</div>
+      <div class="card-title">식재료 자동완성 DB 구축</div>
+      <div class="card-desc">
+        교수님 피드백(등록 번거로움)을 반영하여, 가정에서 자주 쓰는
+        식재료 230개를 DB화했다. 2~3글자만 입력하면 즉시 후보가 뜨고
+        소비기한도 자동으로 입력되어 등록 과정을 대폭 단축한다.
+      </div>
+      <div class="card-tags">
+        <span class="tag">230개 식재료</span>
+        <span class="tag">자동완성</span>
+        <span class="tag">소비기한 자동설정</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <div class="footer-note">리버스레시피 — 4주 개발 프로젝트 · 3주차 발표</div>
+    <div class="footer-badge">
+      <div class="dot"></div>
+      현재 진행중
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

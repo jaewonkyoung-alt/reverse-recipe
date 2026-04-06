@@ -1,4 +1,4 @@
-import { query } from '../db';
+import { query, randomUUID } from '../db';
 import type { Ingredient, IngredientCategory, ExpirationUrgency } from '../types';
 
 /** 식품별 정밀 소비기한 DB (단위: 일) */
@@ -102,12 +102,13 @@ export async function addIngredient(
   }
 ): Promise<Ingredient> {
   const expDate = data.expiration_date || calculateExpirationDate(data.name, data.category);
+  const expDateStr = expDate instanceof Date ? expDate.toISOString() : expDate;
 
   const result = await query(
-    `INSERT INTO ingredients (user_id, name, quantity, unit, category, expiration_date)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO ingredients (id, user_id, name, quantity, unit, category, expiration_date)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
-    [userId, data.name, data.quantity || null, data.unit || null, data.category, expDate]
+    [randomUUID(), userId, data.name, data.quantity || null, data.unit || null, data.category, expDateStr]
   );
   return result.rows[0];
 }
@@ -131,7 +132,7 @@ export async function updateIngredient(
   if (data.quantity !== undefined) { fields.push(`quantity = $${idx++}`); values.push(data.quantity); }
   if (data.unit !== undefined) { fields.push(`unit = $${idx++}`); values.push(data.unit); }
   if (data.category !== undefined) { fields.push(`category = $${idx++}`); values.push(data.category); }
-  if (data.expiration_date !== undefined) { fields.push(`expiration_date = $${idx++}`); values.push(data.expiration_date); }
+  if (data.expiration_date !== undefined) { fields.push(`expiration_date = $${idx++}`); values.push(data.expiration_date instanceof Date ? data.expiration_date.toISOString() : data.expiration_date); }
 
   if (fields.length === 0) return null;
 

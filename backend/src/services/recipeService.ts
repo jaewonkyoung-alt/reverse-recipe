@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { query } from '../db';
+import { query, randomUUID } from '../db';
 import { Recipe, RecipeRecommendRequest, DISPOSAL_SCORES, ENERGY_SCORES } from '../types';
 import crypto from 'crypto';
 
@@ -398,10 +398,10 @@ export async function recommendRecipes(
       const prompt = buildPerplexityPrompt(req);
       recipes = await callPerplexityAPIWithIngredients(prompt, req.ingredients);
       await query(
-        `INSERT INTO recipe_cache (cache_key, recipe_data)
-         VALUES ($1, $2)
-         ON CONFLICT (cache_key) DO UPDATE SET recipe_data = $2, expires_at = NOW() + INTERVAL '24 hours'`,
-        [cacheKey, JSON.stringify(recipes)]
+        `INSERT INTO recipe_cache (id, cache_key, recipe_data, expires_at)
+         VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')
+         ON CONFLICT (cache_key) DO UPDATE SET recipe_data = excluded.recipe_data, expires_at = excluded.expires_at`,
+        [randomUUID(), cacheKey, JSON.stringify(recipes)]
       );
     }
   } else {
@@ -419,9 +419,10 @@ export async function recommendRecipes(
 }
 
 export async function saveRecipeHistory(userId: string, recipe: Recipe): Promise<string> {
+  const id = randomUUID();
   const result = await query(
-    'INSERT INTO recipe_history (user_id, recipe_data) VALUES ($1, $2) RETURNING id',
-    [userId, JSON.stringify(recipe)]
+    'INSERT INTO recipe_history (id, user_id, recipe_data) VALUES ($1, $2, $3) RETURNING id',
+    [id, userId, JSON.stringify(recipe)]
   );
   return result.rows[0].id;
 }

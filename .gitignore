@@ -33,3 +33,4 @@ npm-debug.log*
 
 # Claude Code 설정 (로컬 전용)
 .claude/
+data/

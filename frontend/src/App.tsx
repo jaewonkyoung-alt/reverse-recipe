@@ -8,6 +8,7 @@ import RecipeDetailPage from './pages/RecipeDetailPage';
 import ShoppingPage from './pages/ShoppingPage';
 import ProfilePage from './pages/ProfilePage';
 import MyRipePage from './pages/MyRipePage';
+import LoginPage from './pages/LoginPage';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
         <Route path="/shopping" element={<Layout><ShoppingPage /></Layout>} />
         <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
         <Route path="/myripe" element={<Layout><MyRipePage /></Layout>} />
+        <Route path="/login" element={<Layout><LoginPage /></Layout>} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { query } from '../db';
+import { query, randomUUID } from '../db';
 import axios from 'axios';
 
 const router = Router();
@@ -45,10 +45,10 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
     }
 
     const result = await query(
-      `INSERT INTO shopping_list (user_id, ingredient_name, quantity, unit, recipe_title)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO shopping_list (id, user_id, ingredient_name, quantity, unit, recipe_title)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [userId, ingredient_name, quantity || null, unit || null, recipe_title || null]
+      [randomUUID(), userId, ingredient_name, quantity || null, unit || null, recipe_title || null]
     );
 
     res.status(201).json({ item: result.rows[0] });
@@ -80,10 +80,10 @@ router.post('/bulk', async (req: AuthRequest, res: Response): Promise<void> => {
 
       if (existing.rows.length === 0) {
         const result = await query(
-          `INSERT INTO shopping_list (user_id, ingredient_name, quantity, unit, recipe_title)
-           VALUES ($1, $2, $3, $4, $5)
+          `INSERT INTO shopping_list (id, user_id, ingredient_name, quantity, unit, recipe_title)
+           VALUES ($1, $2, $3, $4, $5, $6)
            RETURNING *`,
-          [userId, item.ingredient_name, item.quantity || null, item.unit || null, item.recipe_title || null]
+          [randomUUID(), userId, item.ingredient_name, item.quantity || null, item.unit || null, item.recipe_title || null]
         );
         added.push(result.rows[0]);
       }

@@ -7,7 +7,7 @@ import {
   completeRecipe,
   calculateGreenPoints,
 } from '../services/recipeService';
-import { query } from '../db';
+import { query, randomUUID } from '../db';
 import { RecipeRecommendRequest } from '../types';
 
 const router = Router();
@@ -33,7 +33,11 @@ router.post('/recommend', async (req: AuthRequest, res: Response): Promise<void>
 
     // Get user preferences
     const userResult = await query('SELECT preferences FROM users WHERE id = $1', [userId]);
-    const userPrefs = userResult.rows[0]?.preferences?.cuisine_weights || {
+    let rawPrefs = userResult.rows[0]?.preferences;
+    if (typeof rawPrefs === 'string') {
+      try { rawPrefs = JSON.parse(rawPrefs); } catch { rawPrefs = {}; }
+    }
+    const userPrefs = rawPrefs?.cuisine_weights || {
       Korean: 1.0,
       Japanese: 0.8,
       Chinese: 0.8,
@@ -105,9 +109,9 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response): Promise<vo
         totalPoints += points;
 
         await query(
-          `INSERT INTO green_points (user_id, ingredient_name, points_earned, reason)
-           VALUES ($1, $2, $3, $4)`,
-          [userId, ing.name, points, `레시피 완성: ${ing.name} 사용`]
+          `INSERT INTO green_points (id, user_id, ingredient_name, points_earned, reason)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [randomUUID(), userId, ing.name, points, `레시피 완성: ${ing.name} 사용`]
         );
       }
     }
@@ -136,7 +140,11 @@ router.get('/history', async (req: AuthRequest, res: Response): Promise<void> =>
       [userId]
     );
 
-    res.json({ history: result.rows });
+    const history = result.rows.map((row) => ({
+      ...row,
+      recipe_data: typeof row.recipe_data === 'string' ? JSON.parse(row.recipe_data) : row.recipe_data,
+    }));
+    res.json({ history });
   } catch (error) {
     console.error('Recipe history error:', error);
     res.status(500).json({ error: '레시피 히스토리를 불러오는 중 오류가 발생했습니다.' });

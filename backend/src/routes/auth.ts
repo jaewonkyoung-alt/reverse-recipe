@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { query } from '../db';
+import { query, randomUUID } from '../db';
 import { generateTokens } from '../middleware/auth';
 
 const router = Router();
@@ -17,17 +17,18 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
     const existing = await query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
-      res.status(409).json({ error: '이미 사용 중인 이메일입니다.' });
+      res.status(409).json({ error: '이미 가입된 이메일입니다. 로그인을 이용해주세요.' });
       return;
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    const newId = randomUUID();
     const result = await query(
-      `INSERT INTO users (email, name, password_hash)
-       VALUES ($1, $2, $3)
+      `INSERT INTO users (id, email, name, password_hash)
+       VALUES ($1, $2, $3, $4)
        RETURNING id, email, name, preferences, created_at`,
-      [email, name, passwordHash]
+      [newId, email, name, passwordHash]
     );
 
     const user = result.rows[0];
@@ -60,7 +61,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     );
 
     if (result.rows.length === 0) {
-      res.status(401).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
+      res.status(401).json({ error: '가입되지 않은 이메일입니다.' });
       return;
     }
 
@@ -68,7 +69,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const isValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isValid) {
-      res.status(401).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
+      res.status(401).json({ error: '비밀번호가 올바르지 않습니다.' });
       return;
     }
 
@@ -107,7 +108,6 @@ router.post('/kakao', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Fetch Kakao user info
     const kakaoRes = await fetch('https://kapi.kakao.com/v2/user/me', {
       headers: { Authorization: `Bearer ${kakaoAccessToken}` },
     });
@@ -128,12 +128,11 @@ router.post('/kakao', async (req: Request, res: Response): Promise<void> => {
     let user = await query('SELECT * FROM users WHERE kakao_id = $1', [kakaoId]);
 
     if (user.rows.length === 0) {
-      // Create new user
       const newUser = await query(
-        `INSERT INTO users (email, name, kakao_id)
-         VALUES ($1, $2, $3)
+        `INSERT INTO users (id, email, name, kakao_id)
+         VALUES ($1, $2, $3, $4)
          RETURNING id, email, name`,
-        [email || `kakao_${kakaoId}@reverse-recipe.com`, name, kakaoId]
+        [randomUUID(), email || `kakao_${kakaoId}@reverse-recipe.com`, name, kakaoId]
       );
       user = newUser;
     }
