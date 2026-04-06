@@ -18,7 +18,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => localStorage.getItem('rr_avatarUrl'));
-  const { ingredients, darkMode, toggleDarkMode, cookingSession, setSelectedRecipe } = useAppStore();
+  const { user, ingredients, darkMode, toggleDarkMode, cookingSession, setSelectedRecipe } = useAppStore();
 
   // Sync avatar when updated in MyRipePage (same tab)
   useEffect(() => {
@@ -170,8 +170,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* ───────── Top Header ───────── */}
-      <header
+      {/* ───────── Top Header (로그인 시에만 표시) ───────── */}
+      {user && <header
         className="sticky top-0 z-50 border-b"
         style={{
           background: 'var(--glass-bg)',
@@ -264,10 +264,10 @@ export default function Layout({ children }: { children: ReactNode }) {
             }
           </Link>
         </div>
-      </header>
+      </header>}
 
       {/* ───────── Main Content ───────── */}
-      <main className="flex-1 px-4 pb-24">
+      <main className={`flex-1 px-4 ${user ? 'pb-24' : 'pb-0'}`}>
         <motion.div
           key={location.pathname}
           initial={{ opacity: 0, y: 8 }}
@@ -278,8 +278,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         </motion.div>
       </main>
 
-      {/* ───────── Bottom Navigation ───────── */}
-      <nav
+      {/* ───────── Bottom Navigation (로그인 시에만 표시) ───────── */}
+      {user && <nav
         className="fixed bottom-0 z-50 border-t"
         style={{
           background: 'var(--glass-nav)',
@@ -335,7 +335,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             );
           })}
         </div>
-      </nav>
+      </nav>}
     </div>
   );
 }

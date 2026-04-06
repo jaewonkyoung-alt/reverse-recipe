@@ -100,7 +100,7 @@ app.listen(PORT, () => {
   ✅ Running on: http://localhost:${PORT}
   📊 Health check: http://localhost:${PORT}/health
   🔑 JWT Auth: Enabled
-  🤖 Perplexity AI: ${process.env.PERPLEXITY_API_KEY ? 'Connected' : 'Mock Mode (no API key)'}
+  🤖 Gemini AI: ${process.env.GEMINI_API_KEY ? 'Connected (gemini-2.5-flash)' : 'Mock Mode (no API key)'}
   `);
 });
 

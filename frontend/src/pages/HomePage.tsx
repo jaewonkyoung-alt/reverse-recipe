@@ -71,71 +71,71 @@ export default function HomePage() {
   // Not logged in
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="text-8xl mb-6">🥗</div>
-          <h1 className="text-3xl font-bold mb-3" style={{ color: 'var(--text)' }}>
-            리버스 레시피
-          </h1>
-          <p className="text-lg mb-2" style={{ color: 'var(--text-muted)' }}>
-            보유 재료 → AI 레시피 추천
-          </p>
-          <p className="text-sm mb-10" style={{ color: 'var(--text-muted)' }}>
-            냉장고에 있는 재료로 만들 수 있는<br />
-            최고의 레시피를 AI가 추천해드려요
-          </p>
+      <div className="min-h-screen flex flex-col px-6" style={{ background: 'var(--bg)' }}>
+        {/* 중앙보다 살짝 위 — 제목 + 기능 카드 */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center" style={{ paddingBottom: '30px' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full"
+          >
+            <h1 className="text-3xl font-bold text-center" style={{ color: 'var(--text)' }}>
+              리버스 레시피
+            </h1>
 
-          <div className="space-y-3 w-full max-w-xs mx-auto">
-            <button
-              onClick={handleGuestLogin}
-              disabled={isLoadingGuest}
-              className="w-full py-4 rounded-2xl text-white font-semibold text-base"
-              style={{ background: 'var(--primary)' }}
-            >
-              {isLoadingGuest ? '⏳ 시작 중...' : '🚀 지금 바로 시작하기 (게스트)'}
-            </button>
-
-            <button
-              onClick={() => navigate('/login')}
-              className="w-full py-4 rounded-2xl font-semibold text-base border-2"
-              style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}
-            >
-              로그인 / 회원가입
-            </button>
-
-            <button
-              className="w-full py-4 rounded-2xl font-semibold text-base"
-              style={{ background: '#FEE500', color: '#000' }}
-            >
-              🟡 카카오로 시작하기
-            </button>
-          </div>
-
-          <div className="mt-10 grid grid-cols-3 gap-4">
-            {[
-              { emoji: '🧊', title: '냉장고 관리', desc: '유통기한 자동 추적' },
-              { emoji: '🤖', title: 'AI 추천', desc: 'Perplexity AI 기반' },
-              { emoji: '🌿', title: '환경 점수', desc: '음식물 낭비 제로' },
-            ].map((feature) => (
-              <div
-                key={feature.title}
-                className="p-3 rounded-2xl text-center"
-                style={{ background: 'var(--primary-light)' }}
-              >
-                <div className="text-2xl mb-1">{feature.emoji}</div>
-                <p className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
-                  {feature.title}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {feature.desc}
-                </p>
+            {/* 제목-카드 간격 */}
+            <div style={{ marginTop: '48px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', width: '100%', maxWidth: '380px' }}>
+                {[
+                  { title: '냉장고 관리', desc: '유통기한 자동 추적' },
+                  { title: 'AI 추천', desc: 'Perplexity AI 기반' },
+                  { title: '환경 점수', desc: '음식물 낭비 제로' },
+                ].map((feature) => (
+                  <div
+                    key={feature.title}
+                    style={{
+                      background: '#e8f5e9',
+                      borderRadius: '16px',
+                      padding: '12px 8px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <p style={{ fontSize: '12px', fontWeight: 600, color: '#2d6a4f', margin: 0 }}>
+                      {feature.title}
+                    </p>
+                    <p style={{ fontSize: '11px', color: '#888', marginTop: '4px', marginBottom: 0 }}>
+                      {feature.desc}
+                    </p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* 버튼 하단 고정 */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
+          className="space-y-3 pb-12"
+        >
+          <button
+            onClick={handleGuestLogin}
+            disabled={isLoadingGuest}
+            className="w-full py-4 rounded-2xl text-white font-semibold text-base"
+            style={{ background: 'var(--primary)' }}
+          >
+            {isLoadingGuest ? '⏳ 시작 중...' : '🚀 지금 바로 시작하기 (게스트)'}
+          </button>
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full py-4 rounded-2xl font-semibold text-base border-2"
+            style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}
+          >
+            로그인 / 회원가입
+          </button>
         </motion.div>
       </div>
     );

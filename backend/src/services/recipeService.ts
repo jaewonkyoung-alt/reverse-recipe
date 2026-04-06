@@ -3,41 +3,53 @@ import { query, randomUUID } from '../db';
 import { Recipe, RecipeRecommendRequest, DISPOSAL_SCORES, ENERGY_SCORES } from '../types';
 import crypto from 'crypto';
 
-const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
-const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || '';
+// 런타임에 매번 읽어야 dotenv.config() 이후에도 정상 동작
+const getGeminiApiKey = () => process.env.GEMINI_API_KEY || '';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
 
-function buildPerplexityPrompt(req: RecipeRecommendRequest): string {
+const GEMINI_SYSTEM_PROMPT = `당신은 전문 요리사 AI입니다.
+반드시 실제로 존재하는 한국/일본/중국/서양 요리만 추천하세요.
+레시피를 임의로 창작하거나 없는 재료 조합을 만들지 마세요.
+응답은 반드시 아래 JSON 스키마를 가진 배열이어야 합니다. 설명, 마크다운, 주석 없이 JSON만 출력하세요.
+
+JSON 스키마 (배열):
+[
+  {
+    "recipe_title": "string (한국어 요리명)",
+    "cuisine_type": "Korean | Japanese | Chinese | Western",
+    "recipe_type": "Main | Side | Soup | Snack | Dessert",
+    "difficulty": "Easy | Medium | Hard",
+    "estimated_total_time_minutes": number,
+    "ingredient_list": [
+      { "name": "string (한국어)", "quantity": "string", "unit": "string" }
+    ],
+    "missing_ingredients": ["string"],
+    "steps": [
+      { "step_number": number, "instruction": "string (한국어)", "time_seconds": number | null }
+    ],
+    "match_score": number
+  }
+]`;
+
+function buildGeminiPrompt(req: RecipeRecommendRequest): string {
   const ingredientList = req.ingredients.join(', ');
   const weightsStr = JSON.stringify(req.expiration_weights, null, 2);
   const filters = req.filters || {};
   const count = req.count || 3;
 
-  return `You are a professional chef AI assistant. The user has the following ingredients available:
-${ingredientList}
+  return `사용 가능한 재료: ${ingredientList}
 
-Expiration priority (higher = must use soon):
+소비기한 우선순위 (숫자가 높을수록 빨리 써야 함):
 ${weightsStr}
 
-${filters.cuisine ? `Preferred cuisine: ${filters.cuisine}` : ''}
-${filters.type ? `Preferred meal type: ${filters.type}` : ''}
-${filters.difficulty ? `Preferred difficulty: ${filters.difficulty}` : ''}
+${filters.cuisine ? `선호 음식 종류: ${filters.cuisine}` : ''}
+${filters.type ? `선호 식사 유형: ${filters.type}` : ''}
+${filters.difficulty ? `선호 난이도: ${filters.difficulty}` : ''}
 
-Please recommend exactly ${count} recipes using these ingredients.
-
-For each recipe, return a JSON object with:
-- recipe_title (string, in Korean)
-- cuisine_type (Korean / Japanese / Chinese / Western)
-- recipe_type (Main / Side / Soup / Snack / Dessert)
-- difficulty (Easy / Medium / Hard)
-- estimated_total_time_minutes (integer)
-- ingredient_list: array of { name (Korean), quantity (string), unit (string) }
-- missing_ingredients: array of ingredient names NOT in user's list
-- steps: array of { step_number, instruction (Korean), time_seconds (null if no timer needed) }
-- match_score (0.0 ~ 1.0, based on how many ingredients match)
-
-Priority rule: Recipes that use more high-urgency expiring ingredients should rank higher.
-Output ONLY valid JSON array. No prose, no markdown. Example format:
-[{"recipe_title":"...", ...}, ...]`;
+위 재료를 활용해 정확히 ${count}개의 레시피를 추천해주세요.
+소비기한이 급한 재료를 더 많이 사용하는 레시피를 우선 추천하세요.
+match_score는 사용자 보유 재료 중 레시피에 사용된 비율(0.0~1.0)입니다.
+missing_ingredients는 사용자 보유 재료 목록에 없는 재료 이름 배열입니다.`;
 }
 
 // ─── Dynamic Mock Recipe Pool ────────────────────────────────────────────────
@@ -331,34 +343,39 @@ export function calculateGreenPoints(
   return Math.round(basePoints * urgencyMultiplier * 10) / 10;
 }
 
-async function callPerplexityAPIWithIngredients(prompt: string, userIngredients: string[]): Promise<Recipe[]> {
-  if (!PERPLEXITY_API_KEY) {
+async function callGeminiAPIWithIngredients(prompt: string, userIngredients: string[]): Promise<Recipe[]> {
+  if (!getGeminiApiKey()) {
     return getMockRecipes(userIngredients);
   }
   try {
     const response = await axios.post(
-      PERPLEXITY_API_URL,
+      `${GEMINI_API_URL}?key=${getGeminiApiKey()}`,
       {
-        model: 'sonar-pro',
-        messages: [
-          { role: 'system', content: 'You are a professional chef AI. Always respond with valid JSON only, no markdown, no prose.' },
-          { role: 'user', content: prompt },
+        system_instruction: {
+          parts: [{ text: GEMINI_SYSTEM_PROMPT }],
+        },
+        contents: [
+          { role: 'user', parts: [{ text: prompt }] },
         ],
-        temperature: 0.3,
-        max_tokens: 4000,
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 8192,
+          responseMimeType: 'application/json',
+        },
       },
       {
-        headers: { Authorization: `Bearer ${PERPLEXITY_API_KEY}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         timeout: 30000,
       }
     );
-    const content = response.data.choices[0]?.message?.content || '[]';
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error('No JSON array found in response');
-    const recipes = JSON.parse(jsonMatch[0]) as Recipe[];
-    // Recompute missing_ingredients based on actual user ingredients
+
+    const content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    const recipes = JSON.parse(content) as Recipe[];
+
+    // Recompute match_score / missing_ingredients based on actual user fridge
     return recipes.map((r) => {
-      const has = (name: string) => userIngredients.some((i) => i.includes(name) || name.includes(i) || i === name);
+      const has = (name: string) =>
+        userIngredients.some((i) => i.includes(name) || name.includes(i) || i === name);
       const matchCount = r.ingredient_list.filter((i) => has(i.name)).length;
       const total = r.ingredient_list.length;
       return {
@@ -368,7 +385,7 @@ async function callPerplexityAPIWithIngredients(prompt: string, userIngredients:
       };
     });
   } catch (error) {
-    console.error('Perplexity API error, using mock data:', error);
+    console.error('Gemini API error, using mock data:', error);
     return getMockRecipes(userIngredients);
   }
 }
@@ -380,7 +397,7 @@ export async function recommendRecipes(
 ): Promise<Recipe[]> {
   let recipes: Recipe[];
 
-  if (PERPLEXITY_API_KEY) {
+  if (getGeminiApiKey()) {
     // Use cache only when real API is available
     const cacheKey = crypto
       .createHash('md5')
@@ -395,8 +412,8 @@ export async function recommendRecipes(
     if (cached.rows.length > 0) {
       recipes = cached.rows[0].recipe_data as Recipe[];
     } else {
-      const prompt = buildPerplexityPrompt(req);
-      recipes = await callPerplexityAPIWithIngredients(prompt, req.ingredients);
+      const prompt = buildGeminiPrompt(req);
+      recipes = await callGeminiAPIWithIngredients(prompt, req.ingredients);
       await query(
         `INSERT INTO recipe_cache (id, cache_key, recipe_data, expires_at)
          VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')
@@ -424,7 +441,7 @@ export async function saveRecipeHistory(userId: string, recipe: Recipe): Promise
     'INSERT INTO recipe_history (id, user_id, recipe_data) VALUES ($1, $2, $3) RETURNING id',
     [id, userId, JSON.stringify(recipe)]
   );
-  return result.rows[0].id;
+  return result.rows[0].id as string;
 }
 
 export async function completeRecipe(historyId: string, userId: string): Promise<boolean> {
