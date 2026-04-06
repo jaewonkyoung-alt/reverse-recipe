@@ -18,7 +18,7 @@
 |------|------|
 | 회원 인증 | 이메일/비밀번호 회원가입·로그인, 게스트 모드 |
 | 냉장고 재료 관리 | 재료 CRUD, 소비기한 자동 계산, 긴급도 표시 |
-| AI 레시피 추천 | Perplexity AI(Sonar) 연동, 소비기한 가중치 기반 추천 |
+| AI 레시피 추천 | Google Gemini 2.5 Flash 연동, 소비기한 가중치 기반 추천 |
 | 요리 완성 처리 | 조리 단계별 타이머, 완성 후 재료 자동 차감 |
 | 쇼핑리스트 | 부족한 재료 추가, 구매완료 체크 |
 | 그린포인트 | 임박 재료 사용 시 환경 기여 포인트 적립 |
@@ -59,7 +59,7 @@
   │  게스트   │──────────┼─▶│ UC1-G. 게스트 로그인 (제한)  │    │
   └──────────┘          │  └─────────────────────────────┘    │
                         │                                      │
-                        │        ▲ Perplexity AI API           │
+                        │        ▲ Google Gemini 2.5 Flash API  │
                         └──────────────────────────────────────┘
 ```
 
@@ -92,7 +92,7 @@
 |------|------|
 | 액터 | 일반 사용자 |
 | 사전 조건 | 냉장고에 재료 1개 이상 등록 |
-| 기본 흐름 | "레시피 추천" 탭 이동 → 서버가 냉장고 재료 조회 → 소비기한 가중치 계산 → Perplexity AI 호출 → 레시피 3개 반환 |
+| 기본 흐름 | "레시피 추천" 탭 이동 → 서버가 냉장고 재료 조회 → 소비기한 가중치 계산 → Google Gemini 2.5 Flash 호출 → 레시피 3개 반환 |
 | 대안 흐름 | API 키 없으면 Mock 레시피 10종 중 재료 매칭률 높은 3개 반환 |
 | 필터 | 요리 종류(한식/일식/중식/양식), 식사 유형(메인/반찬/수프 등), 난이도, 재료 직접 선택 |
 
@@ -144,8 +144,8 @@
 │  └─────────────────────────────┬──────────────────────┘    │
 │                                │ (API 키 있을 때)            │
 │                       ┌────────▼────────┐                  │
-│                       │  Perplexity AI  │                  │
-│                       │  (Sonar Pro)    │                  │
+│                       │  Gemini 2.5     │                  │
+│                       │  Flash (Google) │                  │
 │                       └─────────────────┘                  │
 └───────────────────────────────┬─────────────────────────────┘
                                 │
@@ -211,7 +211,7 @@ recipe_cache
 ### 레시피 추천 시퀀스 다이어그램
 
 ```
-사용자      프론트엔드       백엔드          SQLite        Perplexity AI
+사용자      프론트엔드       백엔드          SQLite        Gemini 2.5 Flash
   │              │               │               │               │
   │ "추천 받기"  │               │               │               │
   │─────────────▶│               │               │               │
@@ -323,15 +323,18 @@ backend/
 | PUT | /api/shopping/:id/purchase | 구매완료 처리 | ✓ |
 | DELETE | /api/shopping/:id | 항목 삭제 | ✓ |
 
-### Perplexity AI 연동 구조
+### Google Gemini 2.5 Flash 연동 구조
 
 ```typescript
-// 프롬프트 설계 (buildPerplexityPrompt)
-`The user has: [냉장고 재료 목록]
-Expiration priority: { "계란": 0.9, "시금치": 0.7, ... }  // 소비기한 임박할수록 높음
-Recommend exactly 3 recipes using these ingredients.
-Priority: use more high-urgency expiring ingredients.
-Output ONLY valid JSON array.`
+// 시스템 프롬프트 (한국어, JSON 모드 적용)
+// - "반드시 실제로 존재하는 요리만 추천" 명시
+// - responseMimeType: "application/json" → 파싱 오류 없는 구조화 응답
+// - temperature: 0.2 → 보수적 응답, 환각 최소화
+
+// 사용자 프롬프트 (buildGeminiPrompt)
+`사용 가능한 재료: [냉장고 재료 목록]
+소비기한 우선순위: { "계란": 0.9, "시금치": 0.7, ... }  // 임박할수록 높음
+소비기한이 급한 재료를 더 많이 사용하는 레시피를 우선 추천하세요.`
 
 // 추천 점수 계산
 recommendation_score =
@@ -398,7 +401,7 @@ recommendation_score =
 
 - **백엔드**: Express.js + SQLite로 REST API 19개 구현, JWT 인증 완성
 - **프론트엔드**: React 19 기반 5개 페이지 (홈/냉장고/레시피/쇼핑/마이리페) 구현
-- **AI 연동**: Perplexity AI API 연동 구조 완성 (Mock 10종 대체 포함)
+- **AI 연동**: Google Gemini 2.5 Flash 실연동 완성, JSON 모드 적용 (Mock 10종 fallback 포함)
 - **데이터**: 230개+ 식재료별 소비기한 DB 내장
 - **핵심 흐름**: 로그인 → 재료 추가 → 레시피 추천 → 요리 완성 → 재료 차감 → 포인트 적립 전 과정 정상 동작 확인
 
@@ -406,19 +409,19 @@ recommendation_score =
 
 | 항목 | 상태 | 사유 |
 |------|------|------|
-| Perplexity API 실 키 미연동 | 구조만 완성 | API 유료 플랜 필요 |
 | OCR 영수증 인식 | 미구현 | Google Cloud Vision 설정 복잡도 |
 | 플레이스토어 배포 | 미완 | 개발자 계정 등록 및 빌드 작업 필요 |
 | 식재료 정규화 | 부분적 | "파", "대파", "쪽파" 동일 개념 처리 미완 |
+| AI 응답 속도 | 개선 필요 | Gemini 2.5 Flash 평균 응답 15~30초 |
 
 ### 향후 개선 방향
 
-1. **Perplexity API 키 발급 및 연동** → Mock → 실제 AI 레시피로 전환 (코드 변경 불필요, 키만 `.env`에 설정)
-2. **Google OAuth 로그인** → 기존 카카오 OAuth 구조 재사용, 소셜 로그인 추가
-3. **PWA 변환 + 플레이스토어 배포** → `vite-plugin-pwa` 설정 + TWA(Trusted Web Activity)로 Android 배포
-4. **식재료 정규화** → 동의어 매핑 테이블 구축 (파→대파, 적양파→양파 등)
-5. **OCR 영수증 인식** → Google Cloud Vision API 연동, 마트 영수증 자동 파싱
+1. **Google OAuth 로그인** → 기존 OAuth 구조 재사용, 소셜 로그인 추가
+2. **PWA 변환 + 플레이스토어 배포** → `vite-plugin-pwa` 설정 + TWA(Trusted Web Activity)로 Android 배포
+3. **식재료 정규화** → 동의어 매핑 테이블 구축 (파→대파, 적양파→양파 등)
+4. **OCR 영수증 인식** → Google Cloud Vision API 연동, 마트 영수증 자동 파싱
+5. **AI 응답 캐시 고도화** → 재료 조합별 24시간 캐시 활용으로 반복 요청 속도 개선
 
 ---
 
-*본 프로젝트는 4주간의 개인 종합설계 과제로, React + Node.js + SQLite 풀스택 구현 및 Perplexity AI 연동 구조를 설계하였습니다.*
+*본 프로젝트는 4주간의 개인 종합설계 과제로, React + Node.js + SQLite 풀스택 구현 및 Google Gemini 2.5 Flash AI를 연동하여 실제 동작하는 레시피 추천 앱을 설계·구현하였습니다.*

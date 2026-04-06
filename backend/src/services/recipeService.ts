@@ -365,12 +365,18 @@ async function callGeminiAPIWithIngredients(prompt: string, userIngredients: str
       },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 30000,
+        timeout: 60000,
       }
     );
 
     const content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-    const recipes = JSON.parse(content) as Recipe[];
+    let parsed = JSON.parse(content);
+    // Gemini가 배열 대신 {recipes:[...]} 객체로 감쌀 때 대응
+    const recipes: Recipe[] = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed?.recipes)
+        ? parsed.recipes
+        : [];
 
     // Recompute match_score / missing_ingredients based on actual user fridge
     return recipes.map((r) => {
@@ -410,16 +416,21 @@ export async function recommendRecipes(
     );
 
     if (cached.rows.length > 0) {
-      recipes = cached.rows[0].recipe_data as Recipe[];
+      // SQLite는 TEXT로 저장되므로 반드시 JSON.parse 필요
+      const raw = cached.rows[0].recipe_data;
+      recipes = typeof raw === 'string' ? JSON.parse(raw) : raw as Recipe[];
     } else {
       const prompt = buildGeminiPrompt(req);
       recipes = await callGeminiAPIWithIngredients(prompt, req.ingredients);
-      await query(
-        `INSERT INTO recipe_cache (id, cache_key, recipe_data, expires_at)
-         VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')
-         ON CONFLICT (cache_key) DO UPDATE SET recipe_data = excluded.recipe_data, expires_at = excluded.expires_at`,
-        [randomUUID(), cacheKey, JSON.stringify(recipes)]
-      );
+      // 유효한 배열일 때만 캐시 저장
+      if (Array.isArray(recipes) && recipes.length > 0) {
+        await query(
+          `INSERT INTO recipe_cache (id, cache_key, recipe_data, expires_at)
+           VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')
+           ON CONFLICT (cache_key) DO UPDATE SET recipe_data = excluded.recipe_data, expires_at = excluded.expires_at`,
+          [randomUUID(), cacheKey, JSON.stringify(recipes)]
+        );
+      }
     }
   } else {
     // No API key — always fresh mock based on current ingredients (no caching)
