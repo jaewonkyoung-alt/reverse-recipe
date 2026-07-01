@@ -12,7 +12,7 @@ import recipeRoutes from './routes/recipes';
 import shoppingRoutes from './routes/shopping';
 import visionRoutes from './routes/vision';
 import purchaseRoutes from './routes/purchases';
-import { authenticate } from './middleware/auth';
+import { requireAuth } from './middleware/auth';
 
 dotenv.config();
 
@@ -21,12 +21,16 @@ const PORT = process.env.PORT || 4000;
 
 // Security middleware
 app.use(helmet({ contentSecurityPolicy: false })); // CSP 비활성화 (static 서빙 시 필요)
-const allowedOrigins = [
+const allowedOrigins: (string | RegExp)[] = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
-  'https://kaila-untempering-reconditely.ngrok-free.dev',
-  /\.ngrok-free\.app$/,
-  /\.ngrok-free\.dev$/,
 ];
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push(
+    'https://kaila-untempering-reconditely.ngrok-free.dev',
+    /\.ngrok-free\.app$/,
+    /\.ngrok-free\.dev$/,
+  );
+}
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true); // 같은 서버(static 서빙)
@@ -66,14 +70,14 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// API routes (all require authentication)
+// API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/ingredients', authenticate, ingredientRoutes);
-app.use('/api/recipes', authenticate, aiLimiter, recipeRoutes);
-app.use('/api/shopping', authenticate, shoppingRoutes);
-app.use('/api/vision', authenticate, visionRoutes);    // Phase 2
-app.use('/api/ocr', authenticate, visionRoutes);       // Phase 2
-app.use('/api/purchases', authenticate, purchaseRoutes); // Phase 3
+app.use('/api/ingredients', requireAuth, ingredientRoutes);
+app.use('/api/recipes', requireAuth, aiLimiter, recipeRoutes);
+app.use('/api/shopping', requireAuth, shoppingRoutes);
+app.use('/api/vision', requireAuth, visionRoutes);
+app.use('/api/ocr', requireAuth, visionRoutes);
+app.use('/api/purchases', requireAuth, purchaseRoutes);
 
 // ── Static frontend serving ──────────────────────────────────────────────
 const distPath = path.join(__dirname, '../../frontend/dist');

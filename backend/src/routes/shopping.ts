@@ -183,13 +183,6 @@ router.post('/search', async (req: AuthRequest, res: Response): Promise<void> =>
       ].sort((a, b) => a.price - b.price), // 가격 낮은 순 정렬
     }));
 
-    // Track analytics
-    await query(
-      `INSERT INTO analytics_events (user_id, event_type, event_data)
-       VALUES ($1, 'shopping_search', $2)`,
-      [req.user!.userId, JSON.stringify({ ingredients })]
-    );
-
     res.json({ results });
   } catch (error) {
     console.error('Shopping search error:', error);

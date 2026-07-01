@@ -37,3 +37,10 @@
 - **토스 대비**: 단일 그라데이션 강조색 원칙을 철저히 지키는 토스와 달리, 필터 버튼 등에 별도 블루(#2563EB)가 섞여 브랜드 일관성이 떨어짐. 또한 토스는 실패 시 항상 구체적 원인을 보여주는 반면, 본 앱은 네트워크 오류·검증 실패·서버 버그가 모두 같은 일반 토스트로 처리됨.
 - **당근마켓 대비**: 빈 상태·다음 행동 유도는 당근마켓 수준으로 잘 구현되어 있음(빈 냉장고/쇼핑리스트 CTA 우수). 다만 설정 메뉴의 죽은 버튼(개인정보처리방침 미연결)이나 미구현 카카오 공유처럼, 당근마켓이라면 노출하지 않았을 "반쯤 완성된" UI가 그대로 사용자에게 보임.
 - **컬리 대비**: 컬리는 상품 카드의 가격 정보 신뢰도와 타이포 위계가 핵심 경쟁력인데, 본 앱은 가격비교 기능이 서버 스키마 누락 버그로 애초에 동작하지 않아(`analytics_events` 테이블 부재) 비교 자체가 불가능한 상태. 우선 동작부터 고친 뒤 디자인 비교가 의미를 가짐.
+
+---
+
+## 개선 완료: 2026-07-02 (사이클 2)
+- `backend/src/routes/shopping.ts`: `/api/shopping/search` 호출 시마다 존재하지 않는 `analytics_events` 테이블에 INSERT하던 코드 제거 → 가격비교 기능 500 에러 해소
+- `backend/src/index.ts`: 개인 데이터 라우트(`/api/ingredients`, `/api/recipes`, `/api/shopping`, `/api/vision`, `/api/purchases`)를 `authenticate`(게스트 폴백 허용)에서 `requireAuth`(미인증 요청 즉시 거부)로 교체 → 인증 없이 타인 데이터에 접근 가능하던 취약점 수정
+- `backend/src/index.ts`: CORS ngrok 도메인 허용(`kaila-untempering-reconditely.ngrok-free.dev` 및 와일드카드 정규식)을 `NODE_ENV !== 'production'` 조건으로 래핑 → 프로덕션 배포 시 임의 제3자 ngrok 터널에서의 credentialed 요청 차단
