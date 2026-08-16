@@ -44,3 +44,6 @@
 - `backend/src/routes/shopping.ts`: `/api/shopping/search` 호출 시마다 존재하지 않는 `analytics_events` 테이블에 INSERT하던 코드 제거 → 가격비교 기능 500 에러 해소
 - `backend/src/index.ts`: 개인 데이터 라우트(`/api/ingredients`, `/api/recipes`, `/api/shopping`, `/api/vision`, `/api/purchases`)를 `authenticate`(게스트 폴백 허용)에서 `requireAuth`(미인증 요청 즉시 거부)로 교체 → 인증 없이 타인 데이터에 접근 가능하던 취약점 수정
 - `backend/src/index.ts`: CORS ngrok 도메인 허용(`kaila-untempering-reconditely.ngrok-free.dev` 및 와일드카드 정규식)을 `NODE_ENV !== 'production'` 조건으로 래핑 → 프로덕션 배포 시 임의 제3자 ngrok 터널에서의 credentialed 요청 차단
+
+## 버그 수정: 2026-08-17 (사이클 3)
+- `frontend/src/services/api.ts`: 401 응답 인터셉터가 느슨한 `localStorage`의 `accessToken`/`user` 키만 지우고, 실제 세션이 들어있는 Zustand `persist` 스토어(`reverse-recipe-storage`)는 그대로 두고 있었음. 토큰 만료 후 인터셉터가 `window.location.href = '/'`로 새로고침하면 Zustand가 만료된 `user`를 그대로 복원하지만 인터셉터가 지운 `accessToken`은 복원되지 않아, 앱이 "로그인된 상태"로 영구히 멈춘 채 모든 API 요청이 계속 401을 반환하는 상태에 빠짐 (재료 목록·추천 등 전부 로딩 실패, 로그인 화면으로 돌아갈 방법 없음). → 인터셉터가 개별 키를 지우는 대신 스토어의 `logout()` 액션(`useAppStore.getState().logout()`)을 호출하도록 수정하여 persist된 상태까지 함께 정리되도록 함. `frontend/src/services/api.ts`, `frontend/src/store/index.ts` 대상으로 `tsc -p tsconfig.app.json --noEmit` 통과 확인.

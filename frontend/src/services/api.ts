@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAppStore } from '../store';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -27,8 +28,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('user');
+      // Clear the persisted Zustand session too — otherwise rehydration on
+      // reload restores the stale user with no valid token, leaving the app
+      // stuck showing a "logged in" screen where every request 401s again.
+      useAppStore.getState().logout();
       window.location.href = '/';
     }
     return Promise.reject(error);
