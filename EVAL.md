@@ -1,4 +1,43 @@
 ---
+## 평가일: 2026-08-28 (사이클 1)
+
+이전 평가(2026-07-01) 이후 사이클 2·3에서 쇼핑 가격비교 500 에러, `requireAuth` 미적용, CORS ngrok 와일드카드, 401 인터셉터의 세션 정리 누락 4건이 실제로 수정된 것을 코드로 확인했다. 이번 사이클은 프론트엔드 전체 페이지/컴포넌트와 백엔드 전체 라우트/서비스/DB 계층을 다시 처음부터 읽고 새로 평가한다.
+
+### 종합 점수
+| 항목 | 점수 | 비고 |
+|------|------|------|
+| UI/UX | 7/10 | 지난 평가와 동일 — 죽은 설정 버튼, 브랜드 컬러 이탈, 중복 프로필 페이지 모두 미해결 |
+| 보안 | 5/10 | 인증 강제·CORS는 고쳐졌으나 게스트 계정이 전 세계 모든 게스트 사용자와 공유되는 더 심각한 결함을 발견 |
+| AI 레시피 품질 | 6/10 | 지난 평가와 동일 — 가짜 칼로리 수치 노출 미해결 |
+| 출시 준비도 | 5/10 | 핵심 크래시(가격비교) 해소로 소폭 상승, 게스트 계정 공유·docker-compose 불일치·미사용 라우트의 스키마 크래시가 여전히 발목 |
+| 기능 완성도 | 8/10 | 가격비교·세션 만료 버그 해소로 핵심 플로우 안정성 향상 |
+| **종합** | **6.2/10** | |
+
+### 시급한 개선 필요 (P1)
+1. **모든 게스트 사용자가 동일한 계정을 공유 — 사실상 전역 공용 냉장고** - `backend/src/routes/auth.ts:90-98` - `POST /api/auth/guest`가 매번 하드코딩된 고정 UUID(`00000000-0000-0000-0000-000000000001`)로 토큰을 발급한다. "게스트로 시작하기" 버튼을 누른 모든 기기·모든 사용자가 DB상 동일한 `user_id`로 귀결되므로, 한 사람이 넣은 냉장고 재료·저장한 레시피·그린포인트·쇼핑리스트가 전혀 모르는 다른 게스트 사용자에게 그대로 보이거나 그 사용자가 지우고 바꿀 수 있다. `backend/src/db/index.ts:98-104`의 시드 데이터도 이 계정을 미리 만들어 둔다. 랜딩 페이지 카피(`HomePage.tsx`: "🚀 지금 바로 시작하기 (게스트)")는 개인화된 경험을 약속하지만 실제로는 다인용 공유 계정이라, 출시 시 가장 먼저 터질 개인정보 노출 이슈다. **개선 방향**: `guestLogin`에서 매 호출마다 새 UUID로 게스트 유저 행을 `INSERT`하고 그 ID로 토큰을 발급하도록 변경.
+2. **JWT를 localStorage에 저장 (XSS 토큰 탈취 위험)** - `frontend/src/services/api.ts:17`, `frontend/src/store/index.ts:78` - 지난 평가에서 지적된 뒤 아직 손대지 않음. 7일짜리 accessToken이 XSS 한 번으로 탈취 가능한 상태 그대로. **개선 방향**: 서버가 httpOnly+SameSite 쿠키로 토큰을 내려주는 구조로 단계적 전환.
+3. **`purchase_imports` 테이블의 실제 DB 스키마와 INSERT 컬럼이 완전히 불일치** - `backend/src/db/index.ts:76-82`(스키마: `id, user_id, store_name, items, imported_at`) vs `backend/src/routes/purchases.ts:91-97`(INSERT 대상: `user_id, platform, raw_product_name, parsed_ingredient, quantity, unit`, `id` 컬럼 자체를 넣지 않음) - `POST /api/purchases/import/mock` 호출 시 SQLite가 `no such column: platform`으로 즉시 예외를 던진다. 현재 `frontend/src/services/api.ts`에 이 엔드포인트를 호출하는 코드가 없어 사용자에게 당장 노출되진 않지만, 라우트 자체는 `backend/src/index.ts`에 이미 마운트되어 있어 누구든 직접 호출하면 500이 난다. **개선 방향**: 스키마를 라우트가 기대하는 컬럼(`platform`, `raw_product_name`, `parsed_ingredient`, `quantity`, `unit`, `id`)에 맞춰 다시 정의하거나, 미완성 기능이면 라우트를 index.ts에서 내림.
+
+### 개선 권장 (P2)
+1. **가짜 칼로리 수치 중복 구현 및 실제 정보처럼 노출** - `frontend/src/pages/RecipeDetailPage.tsx:12-20`, `frontend/src/components/RecipeCard.tsx:26-34` - 미해결. 동일한 `estimateCalories()`가 두 파일에 중복되어 있고 제목 해시 기반 의사난수를 "~580 kcal"로 노출.
+2. **설정 메뉴 항목이 죽은 버튼** - `frontend/src/pages/MyRipePage.tsx:275-277`, `frontend/src/pages/ProfilePage.tsx:166-180` - 미해결. "개인정보 처리방침" 등은 플레이스토어 등록 필수 요건이라 이대로는 출시 불가.
+3. **카카오톡 공유가 안내 토스트만 띄우는 미완성 기능** - `frontend/src/pages/RecipeDetailPage.tsx:173-175` - 미해결.
+4. **중복 프로필 페이지 공존** - `frontend/src/pages/ProfilePage.tsx` vs `frontend/src/pages/MyRipePage.tsx` - 미해결. `App.tsx:38-39`에 둘 다 라우팅되어 있고 `Layout.tsx`의 하단 내비게이션은 `/myripe`만 가리킴.
+5. **필터/카테고리 선택 색상이 브랜드 그린(`var(--primary)`)에서 이탈** - `frontend/src/pages/RecommendPage.tsx`, `frontend/src/pages/FridgePage.tsx` - 미해결. `#2563EB` 블루가 여전히 하드코딩.
+6. **docker-compose.yml이 실제 런타임(SQLite)과 불일치** - `docker-compose.yml` - 미해결. Postgres 컨테이너 정의가 그대로 남아있어 배포 시 혼선 소지.
+
+### 장기 개선 (P3)
+1. 서버 측 비밀번호 정책 부재 - `backend/src/routes/auth.ts:9-16` register는 값 존재 여부만 확인, 길이·복잡도 검증 없음. 프론트(`LoginPage.tsx:80`)만 6자 이상을 강제하므로 API 직접 호출 시 우회 가능.
+2. 네트워크 실패·검증 실패·서버 오류가 모두 동일한 일반 토스트로 뭉뚱그려져 원인 구분 불가 - 미해결.
+3. 재료 이름·recipe_title 등 입력값의 길이/형식 서버 검증이 존재 유무 체크 수준 - 미해결.
+
+### 시장 앱 대비 부족한 점 요약
+- **토스 대비**: 토스는 실패 원인을 항상 구체적으로 보여주고 서비스 전반의 강조색을 하나로 고정하는데, 본 앱은 여전히 일반 오류 토스트와 이탈된 블루 강조색이 남아있다.
+- **당근마켓 대비**: 당근마켓이라면 사용자별 데이터 격리가 당연한 전제인데, 본 앱은 게스트 로그인 자체가 전역 계정 공유 구조라 "내 냉장고"라는 개인화 경험이 실은 다인용 공용 냉장고다. 이는 UI 완성도 문제가 아니라 서비스 신뢰의 근본 전제가 깨진 것이라 최우선 수정 대상이다.
+- **컬리 대비**: 가격비교 기능은 지난 사이클에서 크래시가 해소되어 실제로 동작하기 시작했다. 다만 컬리 수준의 신뢰도를 갖추려면 여전히 해시 기반 가짜 가격/칼로리 대신 실데이터 연동이 필요하다.
+
+---
+
 ## 평가일: 2026-07-01 (사이클 1)
 
 ### 종합 점수
