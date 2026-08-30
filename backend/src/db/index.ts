@@ -76,8 +76,11 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS purchase_imports (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    store_name TEXT,
-    items TEXT,
+    platform TEXT,
+    raw_product_name TEXT,
+    parsed_ingredient TEXT,
+    quantity REAL,
+    unit TEXT,
     imported_at TEXT DEFAULT (datetime('now'))
   );
 
@@ -103,6 +106,25 @@ db.exec(`
     '$2a$10$dummy.hash.for.guest.user.only'
   );
 `);
+
+// purchase_imports 컬럼이 예전 스키마(store_name, items)로 이미 만들어진 DB를 위한 보강 마이그레이션
+{
+  const existingColumns = new Set(
+    (db.pragma('table_info(purchase_imports)') as Array<{ name: string }>).map((c) => c.name)
+  );
+  const requiredColumns: Record<string, string> = {
+    platform: 'TEXT',
+    raw_product_name: 'TEXT',
+    parsed_ingredient: 'TEXT',
+    quantity: 'REAL',
+    unit: 'TEXT',
+  };
+  for (const [column, type] of Object.entries(requiredColumns)) {
+    if (!existingColumns.has(column)) {
+      db.exec(`ALTER TABLE purchase_imports ADD COLUMN ${column} ${type}`);
+    }
+  }
+}
 
 export { randomUUID };
 export default db;

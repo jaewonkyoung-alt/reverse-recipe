@@ -88,14 +88,26 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
 // POST /api/auth/guest
 router.post('/guest', async (_req: Request, res: Response): Promise<void> => {
-  const guestId = '00000000-0000-0000-0000-000000000001';
-  const { accessToken } = generateTokens(guestId, 'guest@reverse-recipe.com');
+  try {
+    const guestId = randomUUID();
+    const guestEmail = `guest-${guestId}@reverse-recipe.local`;
 
-  res.json({
-    user: { id: guestId, email: 'guest@reverse-recipe.com', name: '게스트' },
-    accessToken,
-    isGuest: true,
-  });
+    await query(
+      `INSERT INTO users (id, email, name) VALUES ($1, $2, $3)`,
+      [guestId, guestEmail, '게스트']
+    );
+
+    const { accessToken } = generateTokens(guestId, guestEmail);
+
+    res.json({
+      user: { id: guestId, email: guestEmail, name: '게스트' },
+      accessToken,
+      isGuest: true,
+    });
+  } catch (error) {
+    console.error('Guest login error:', error);
+    res.status(500).json({ error: '게스트 로그인 중 오류가 발생했습니다.' });
+  }
 });
 
 // POST /api/auth/kakao (Kakao OAuth)

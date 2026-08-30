@@ -5,7 +5,7 @@
  */
 import { Router, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { query } from '../db';
+import { query, randomUUID } from '../db';
 
 const router = Router();
 
@@ -89,11 +89,11 @@ router.post('/import/mock', async (req: AuthRequest, res: Response): Promise<voi
     if (!ingredient) continue;
 
     const result = await query(
-      `INSERT INTO purchase_imports (user_id, platform, raw_product_name, parsed_ingredient, quantity, unit)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO purchase_imports (id, user_id, platform, raw_product_name, parsed_ingredient, quantity, unit)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT DO NOTHING
        RETURNING *`,
-      [userId, platform, order.raw_product_name, ingredient.name, ingredient.quantity, ingredient.unit]
+      [randomUUID(), userId, platform, order.raw_product_name, ingredient.name, ingredient.quantity, ingredient.unit]
     );
 
     if (result.rows.length > 0) {

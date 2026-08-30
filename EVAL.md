@@ -84,5 +84,11 @@
 - `backend/src/index.ts`: 개인 데이터 라우트(`/api/ingredients`, `/api/recipes`, `/api/shopping`, `/api/vision`, `/api/purchases`)를 `authenticate`(게스트 폴백 허용)에서 `requireAuth`(미인증 요청 즉시 거부)로 교체 → 인증 없이 타인 데이터에 접근 가능하던 취약점 수정
 - `backend/src/index.ts`: CORS ngrok 도메인 허용(`kaila-untempering-reconditely.ngrok-free.dev` 및 와일드카드 정규식)을 `NODE_ENV !== 'production'` 조건으로 래핑 → 프로덕션 배포 시 임의 제3자 ngrok 터널에서의 credentialed 요청 차단
 
+## 개선 완료: 2026-08-30 (사이클 2)
+- `backend/src/routes/auth.ts`: `POST /api/auth/guest`가 고정 UUID(`00000000-0000-0000-0000-000000000001`)를 매번 재사용하던 것을 매 호출마다 `randomUUID()`로 새 게스트 계정을 `INSERT`하고 그 ID로 토큰을 발급하도록 변경 → 모든 게스트 사용자가 동일한 냉장고·레시피·그린포인트를 공유하던 전역 공용 계정 문제 해소. `authenticate()`(현재 미사용) 및 최초 시드 데이터의 고정 게스트 행은 기존 캐시된 토큰과의 하위호환을 위해 그대로 유지.
+- `backend/src/db/index.ts`: `purchase_imports` 테이블 스키마를 실제 라우트가 쓰는 컬럼(`platform`, `raw_product_name`, `parsed_ingredient`, `quantity`, `unit`)에 맞춰 재정의하고, 이미 구 스키마(`store_name`, `items`)로 생성된 기존 DB 파일도 기동 시 `ALTER TABLE`로 자동 보강하는 마이그레이션 추가 → `POST /api/purchases/import/mock` 호출 시 `no such column: platform` 500 에러 해소.
+- `backend/src/routes/purchases.ts`: 위 스키마에 맞춰 `INSERT`에 `id`(`randomUUID()`) 컬럼을 명시적으로 채우도록 수정 (SQLite는 TEXT PRIMARY KEY에 자동 채번을 해주지 않음).
+- 검증: 로컬 서버 기동 후 `POST /api/auth/guest`를 두 번 호출해 서로 다른 `user.id`가 발급됨을 확인, `POST /api/purchases/import/mock` → `GET /api/purchases/history`가 정상적으로 6개 항목을 반환함을 확인.
+
 ## 버그 수정: 2026-08-17 (사이클 3)
 - `frontend/src/services/api.ts`: 401 응답 인터셉터가 느슨한 `localStorage`의 `accessToken`/`user` 키만 지우고, 실제 세션이 들어있는 Zustand `persist` 스토어(`reverse-recipe-storage`)는 그대로 두고 있었음. 토큰 만료 후 인터셉터가 `window.location.href = '/'`로 새로고침하면 Zustand가 만료된 `user`를 그대로 복원하지만 인터셉터가 지운 `accessToken`은 복원되지 않아, 앱이 "로그인된 상태"로 영구히 멈춘 채 모든 API 요청이 계속 401을 반환하는 상태에 빠짐 (재료 목록·추천 등 전부 로딩 실패, 로그인 화면으로 돌아갈 방법 없음). → 인터셉터가 개별 키를 지우는 대신 스토어의 `logout()` 액션(`useAppStore.getState().logout()`)을 호출하도록 수정하여 persist된 상태까지 함께 정리되도록 함. `frontend/src/services/api.ts`, `frontend/src/store/index.ts` 대상으로 `tsc -p tsconfig.app.json --noEmit` 통과 확인.
