@@ -71,10 +71,19 @@ push)
   done
   [ "$LEAK" -eq 1 ] && { echo "비밀값 의심으로 푸시 중단."; exit 3; }
 
-  BRANCH="autoteam/$(date +%Y%m%d)"
-  git rev-parse --verify "$BRANCH" >/dev/null 2>&1 \
-    && git checkout "$BRANCH" >/dev/null 2>&1 \
-    || git checkout -b "$BRANCH" >/dev/null 2>&1
+  # ── 브랜치 ──────────────────────────────────────────────────
+  # 날짜만 쓰면 같은 날 두 번째 사이클이 이전 브랜치를 재사용해
+  # 이미 머지된 작업을 되돌리는 커밋이 된다 (실제 발생).
+  # 매번 origin/main 에서 새로 딴다. 시각까지 붙여 충돌을 없앤다.
+  BRANCH="autoteam/$(date +%Y%m%d-%H%M%S)"
+  git fetch -q origin main || { echo "fetch 실패"; exit 6; }
+  if ! git checkout -q -b "$BRANCH" origin/main; then
+    echo "!! 브랜치 생성 실패 — main 에 커밋되는 것을 막기 위해 중단한다."
+    exit 6
+  fi
+  # 체크아웃이 실패했는데도 진행되면 main 을 오염시킨다. 반드시 확인.
+  CUR="$(git rev-parse --abbrev-ref HEAD)"
+  [ "$CUR" = "$BRANCH" ] || { echo "!! 현재 브랜치가 $CUR 다. 중단."; exit 6; }
 
   git add -- "${DELTA[@]}"
   git diff --cached --quiet && { echo "스테이징 결과 비어있음."; exit 0; }
@@ -89,7 +98,6 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" || exit 4
   echo "푸시 완료: $BRANCH"
 
   if command -v gh >/dev/null 2>&1; then
-    gh pr view "$BRANCH" >/dev/null 2>&1 && { echo "PR 이미 존재 — 커밋만 추가됨"; exit 0; }
     gh pr create --base main --head "$BRANCH" \
       --title "auto: ${SUMMARY:-봇 자동 변경} ($(date +%Y-%m-%d))" \
       --body "$(printf '## 변경\n%s\n\n## 검토 포인트\n- 평가자(Grok) PASS 판정 후 자동 생성됨\n- 병합 전 사람 확인 필요\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n' "$(printf '%s\n' "${DELTA[@]}" | sed 's/^/- /')")" \

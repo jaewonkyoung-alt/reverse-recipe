@@ -13,6 +13,7 @@ import shoppingRoutes from './routes/shopping';
 import visionRoutes from './routes/vision';
 import purchaseRoutes from './routes/purchases';
 import { requireAuth } from './middleware/auth';
+import { probeGeminiKey } from './services/recipeService';
 
 dotenv.config();
 
@@ -99,13 +100,18 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 });
 
 app.listen(PORT, () => {
+  const geminiStatus = process.env.GEMINI_API_KEY
+    ? 'Key present (validating...)'
+    : 'Mock Mode (no API key)';
   console.log(`
 🥗 Reverse Recipe API Server
   ✅ Running on: http://localhost:${PORT}
   📊 Health check: http://localhost:${PORT}/health
   🔑 JWT Auth: Enabled
-  🤖 Gemini AI: ${process.env.GEMINI_API_KEY ? 'Connected (gemini-2.5-flash)' : 'Mock Mode (no API key)'}
+  🤖 Gemini AI: ${geminiStatus}
   `);
+  // 키가 있으면 실제 통신 여부를 확인한다. 결과는 비동기로 출력.
+  probeGeminiKey().catch(() => {/* 오류는 probeGeminiKey 내부에서 이미 로깅 */});
 });
 
 export default app;

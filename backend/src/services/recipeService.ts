@@ -391,8 +391,59 @@ async function callGeminiAPIWithIngredients(prompt: string, userIngredients: str
       };
     });
   } catch (error) {
-    console.error('Gemini API error, using mock data:', error);
-    return getMockRecipes(userIngredients);
+    const status = (error as { response?: { status?: number } })?.response?.status;
+    const msg = (error as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+    console.error(`[Gemini] API call failed (HTTP ${status ?? 'N/A'}): ${msg ?? String(error)}`);
+    console.error('[Gemini] GEMINI_API_KEY is set but the API rejected it. Fix the key or remove it to use mock mode intentionally.');
+    throw error;
+  }
+}
+
+/**
+ * 기동 시 Gemini API 키가 실제로 generateContent 권한과 할당량을 가지는지 확인한다.
+ * 모델 목록 조회가 아니라 실제 생성 호출로 검증하고, 결과를 3갈래로 분류한다.
+ * 프로세스 기동을 막지 않는다.
+ */
+export async function probeGeminiKey(): Promise<void> {
+  const key = getGeminiApiKey();
+  if (!key) return; // 키 없음 = 의도적 mock 모드, 경고 불필요
+
+  const PROBE_PROMPT = '재료 1개(계란)로 만들 수 있는 레시피 1개를 JSON 배열로만 출력하라. 스키마: [{"recipe_title":"string"}]';
+
+  let probeRes: { data: unknown };
+  try {
+    probeRes = await axios.post(
+      `${GEMINI_API_URL}?key=${key}`,
+      {
+        system_instruction: { parts: [{ text: GEMINI_SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: PROBE_PROMPT }] }],
+        generationConfig: { maxOutputTokens: 256, responseMimeType: 'application/json' },
+      },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 15000 }
+    );
+  } catch (error) {
+    const status = (error as { response?: { status?: number } })?.response?.status;
+    const msg = (error as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+    if (status === 400 || status === 401 || status === 403) {
+      console.error(`[Gemini] Key invalid (HTTP ${status}): ${msg ?? 'no message'}`);
+    } else {
+      console.warn(`[Gemini] Key check failed (transient) (HTTP ${status ?? 'network error'})`);
+    }
+    return;
+  }
+
+  // 2xx — candidates 텍스트가 실제로 파싱 가능한지 확인해야 Key valid
+  const text = (probeRes.data as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> })
+    ?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    console.error('[Gemini] Key invalid: 2xx 응답이지만 candidates 텍스트가 없음');
+    return;
+  }
+  try {
+    JSON.parse(text);
+    console.log('[Gemini] Key valid');
+  } catch {
+    console.error('[Gemini] Key invalid: 2xx 응답이지만 candidates 텍스트가 JSON 파싱 불가');
   }
 }
 
