@@ -21,18 +21,26 @@ role_programmer() {
   claude -p "$1" --permission-mode acceptEdits
 }
 
-# ── 평가자: Grok Build (Claude와 다른 계열 → 교차 검증)
-#    --json-schema 로 판정을 구조적으로 강제한다.
-#    verdict 가 PASS/REJECT/ESCALATE 이외의 값이 되는 것은 생성 자체가 불가능.
-#    출력은 JSON이며 실제 판정은 .structuredOutput 에 들어있다.
+# ── 평가자 ─────────────────────────────────────────────────────────
+# 1순위 Grok (Claude 와 다른 계열 → 교차 검증).
+# Grok 무료 한도가 소진되면 {"type":"error",...usage limit...} 을 내므로
+# 그 경우 Claude 로 폴백해 사이클을 이어간다. 교차 검증 효과는 줄어든다.
 GROK_BIN="${GROK_BIN:-$HOME/.grok/bin/grok}"
-# zsh 에서 source 될 때 BASH_SOURCE 가 비므로 절대경로로 고정한다.
 EVAL_SCHEMA="$PROJECT_ROOT/.autoteam/evaluator-schema.json"
-# --max-turns: 에이전틱으로 파일을 계속 읽다 취소되면
-# structuredOutput 이 null 로 오고 판정을 못 읽는다 (실제 발생: 7턴 후 cancelled).
-# 평가에 필요한 만큼만 읽도록 제한한다.
+
 role_evaluator() {
-  "$GROK_BIN" -p "$1" --json-schema "$(cat "$EVAL_SCHEMA")" --max-turns 4
+  local out
+  out="$("$GROK_BIN" -p "$1" --json-schema "$(cat "$EVAL_SCHEMA")" --max-turns 4 2>/dev/null)"
+  if printf '%s' "$out" | grep -q '"type":"error"'; then
+    echo "[평가자] Grok 한도 소진 — Claude 로 폴백" >&2
+    claude -p "$1
+
+## 출력 형식 (엄수)
+다른 말 없이 아래 스키마의 JSON 객체 하나만 출력하라. 코드펜스도 쓰지 마라.
+$(cat "$EVAL_SCHEMA")" --permission-mode plan
+  else
+    printf '%s' "$out"
+  fi
 }
 
 # ── 재무부: RELEASE.md 등 문서를 써야 하므로 편집 권한 필요.
