@@ -6,22 +6,14 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const api = axios.create({
   baseURL: API_BASE,
   timeout: 70000,
+  // 토큰은 서버가 httpOnly 쿠키로 관리한다. 이 옵션이 없으면
+  // 개발 환경처럼 프론트(:3000)와 백엔드(:4000)가 다른 출처일 때
+  // 쿠키가 실리지 않아 모든 인증 요청이 401 이 된다.
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
-// Request interceptor — attach JWT token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 // Response interceptor — handle auth errors
 api.interceptors.response.use(
