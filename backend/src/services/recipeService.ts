@@ -5,7 +5,15 @@ import crypto from 'crypto';
 
 // 런타임에 매번 읽어야 dotenv.config() 이후에도 정상 동작
 const getGeminiApiKey = () => process.env.GEMINI_API_KEY || '';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
+// 2026-09 확인: 버전 고정 모델(gemini-2.5-flash, gemini-2.5-pro 등)은
+// 신규 사용자에게 404 를 낸다 — "no longer available to new users".
+// 모델 목록 API 에는 여전히 보이지만 generateContent 는 거부된다.
+// `-latest` 별칭만 동작하므로 별칭을 쓴다. 다음 세대 전환 때 코드를 다시
+// 고치지 않아도 되는 이점도 있다.
+// flash-latest 는 용량 부족으로 503 이 잦아 flash-lite-latest 를 기본으로 둔다.
+// GEMINI_MODEL 환경변수로 덮어쓸 수 있다.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-lite-latest';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const GEMINI_SYSTEM_PROMPT = `당신은 전문 요리사 AI입니다.
 반드시 실제로 존재하는 한국/일본/중국/서양 요리만 추천하세요.
@@ -417,7 +425,9 @@ export async function probeGeminiKey(): Promise<void> {
       {
         system_instruction: { parts: [{ text: GEMINI_SYSTEM_PROMPT }] },
         contents: [{ role: 'user', parts: [{ text: PROBE_PROMPT }] }],
-        generationConfig: { maxOutputTokens: 256, responseMimeType: 'application/json' },
+        // 시스템 프롬프트가 전체 레시피 스키마를 요구하므로 응답이 600자를
+        // 넘는다. 256 토큰이면 JSON 이 잘려 "파싱 불가"로 오판한다.
+        generationConfig: { maxOutputTokens: 2048, responseMimeType: 'application/json' },
       },
       { headers: { 'Content-Type': 'application/json' }, timeout: 15000 }
     );
