@@ -43,10 +43,19 @@ $(cat "$EVAL_SCHEMA")" --permission-mode plan
   fi
 }
 
-# ── 재무부: RELEASE.md 등 문서를 써야 하므로 편집 권한 필요.
-#    코드는 건드리지 않도록 프롬프트로 막는다.
+# ── 재무부 ─────────────────────────────────────────────────────────
+# Gemini CLI 는 2026-09 기준 개인용 Code Assist OAuth 가 중단됐고
+# API 키 경로도 응답이 오지 않는다. 응답이 비면 Claude 로 폴백한다.
+# 코드를 건드리지 않는 것은 프롬프트로 막는다.
 role_finance() {
-  gemini -p "$1" --approval-mode auto_edit
+  local out
+  out="$(GEMINI_CLI_TRUST_WORKSPACE=true gemini -p "$1" --approval-mode auto_edit 2>/dev/null)"
+  if [ -z "$out" ]; then
+    echo "[재무부] Gemini 무응답 — Claude 로 폴백" >&2
+    claude -p "$1" --permission-mode acceptEdits
+  else
+    printf '%s' "$out"
+  fi
 }
 
 # ── Grok Build 설치 후 평가자를 그록으로 바꾸려면 위를 주석 처리하고 아래를 쓴다.
