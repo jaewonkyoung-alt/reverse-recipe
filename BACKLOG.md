@@ -9,7 +9,7 @@
 | B-003 | P1 | 소비기한 DB 이중화 해소 (단일 소스) | 프로그래머 | 검토 |
 | B-004 | P1 | 출시 경로 확정 후 타깃 API 36 대응 | 재무부 | 차단 |
 | B-005 | P2 | 가짜 가격·칼로리 UI에서 제거 | 프로그래머 | 검토 |
-| B-006 | P2 | HomePage "Perplexity AI 기반" → Gemini | 프로그래머 | 대기 |
+| B-006 | P2 | HomePage "Perplexity AI 기반" → Gemini | 프로그래머 | 검토 |
 | B-007 | P2 | ProfilePage 삭제 (MyRipePage와 중복) | 프로그래머 | 대기 |
 | B-008 | P2 | JWT를 httpOnly 쿠키로 전환 | 프로그래머 | 대기 |
 | B-009 | P3 | pg 호환 shim 제거 → Kysely 전환 | 프로그래머 | 대기 |
