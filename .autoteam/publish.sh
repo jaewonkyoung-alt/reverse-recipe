@@ -41,6 +41,21 @@ push)
   echo "봇 변경 파일 ${#DELTA[@]}개:"
   printf '  %s\n' "${DELTA[@]}"
 
+  # ── 무시된 파일 경고 ────────────────────────────────────────
+  # 봇이 만든 파일이 .gitignore 에 걸리면 git status 에 안 잡혀
+  # 그 파일을 import 하는 코드만 푸시되어 원격 빌드가 깨진다.
+  # (실제 발생: backend/src/data/*.ts 가 'data/' 규칙에 걸림)
+  IGNORED="$(git status --porcelain --ignored 2>/dev/null \
+             | awk '$1=="!!"{print $2}' \
+             | grep -E '\.(ts|tsx|js|jsx|json)$' || true)"
+  if [ -n "$IGNORED" ]; then
+    echo ""
+    echo "!! 경고: 아래 소스 파일이 .gitignore 에 걸려 푸시에서 빠진다"
+    printf '   %s\n' $IGNORED
+    echo "   import 하는 코드만 올라가면 원격 빌드가 깨진다. .gitignore 확인할 것."
+    exit 4
+  fi
+
   # ── 비밀값 스캔 ──────────────────────────────────────────────
   # grep 정규식은 시스템 grep(ugrep)에서 complexity limit 으로 조용히 죽는다.
   # 에러가 나도 종료코드가 0이라 "깨끗함"으로 통과해버리므로 파이썬으로 한다.
