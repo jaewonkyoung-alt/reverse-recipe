@@ -14,6 +14,10 @@
 | B-008 | P2 | JWT를 httpOnly 쿠키로 전환 | 프로그래머 | 대기 |
 | B-009 | P3 | pg 호환 shim 제거 → Kysely 전환 | 프로그래머 | 대기 |
 | B-010 | P1 | Gemini 키 무효 시 조용한 Mock 폴백 — 실패를 표면화 | 프로그래머 | 대기 |
+| B-011 | P1 | Capacitor 래핑 + 타깃 API 36 | 프로그래머 | 차단 |
+| B-012 | P1 | AdMob 배너 삽입 (내비 아래, 조리모드 숨김) | 프로그래머 | 차단 |
+| B-013 | P1 | AD_ID 권한 선언 + UMP 동의 플로우 | 프로그래머 | 차단 |
+| B-014 | P1 | 개인정보처리방침에 광고 데이터 수집 반영 | 재무부 | 대기 |
 
 ## 근거
 - B-002, B-003, B-005, B-009: `REBUILD_PLAN.md` §1.2
@@ -23,3 +27,5 @@
   거부 → 앱은 계속 Mock만 내보내고 있으나 아무도 모름.
 - B-006: `frontend/src/pages/HomePage.tsx:92` — 백엔드는 Gemini인데 화면만 Perplexity
 - B-001, B-004: `RELEASE.md`
+- B-011~014: `MASTER_PLAN.md` §1 Phase 1, §2 광고 배치 설계.
+  B-011~013은 백엔드 호스팅 결정(DECISIONS #2) 전까지 차단.
