@@ -22,18 +22,6 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   Hard: '#EF4444',
 };
 
-// Deterministic calorie estimate based on recipe type + title hash
-function estimateCalories(recipe: Recipe): number {
-  const base: Record<string, number> = {
-    Main: 580, Side: 270, Soup: 200, Snack: 220, Dessert: 310,
-  };
-  const b = base[recipe.recipe_type] ?? 400;
-  const hash = recipe.recipe_title.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const variance = (hash % 201) - 100; // -100 to +100
-  return Math.round((b + variance) / 10) * 10;
-}
-
-
 export default function RecipeCard({ recipe, index }: RecipeCardProps) {
   const navigate = useNavigate();
   const setSelectedRecipe = useAppStore((s) => s.setSelectedRecipe);
@@ -41,7 +29,6 @@ export default function RecipeCard({ recipe, index }: RecipeCardProps) {
   const matchPercent = Math.round((recipe.match_score || 0) * 100);
   const scorePercent = Math.round((recipe.recommendation_score || recipe.match_score) * 100);
   const missingCount = recipe.missing_ingredients?.length || 0;
-  const calories = estimateCalories(recipe);
 
   const handleClick = () => {
     setSelectedRecipe(recipe);
@@ -111,12 +98,6 @@ export default function RecipeCard({ recipe, index }: RecipeCardProps) {
             style={{ background: '#F3F4F6', color: 'var(--text-muted)' }}
           >
             ⏱️ {recipe.estimated_total_time_minutes}분
-          </span>
-          <span
-            className="px-2.5 py-1 rounded-full text-xs font-medium"
-            style={{ background: '#F3F4F6', color: 'var(--text-muted)' }}
-          >
-            ~{calories} kcal
           </span>
         </div>
 
