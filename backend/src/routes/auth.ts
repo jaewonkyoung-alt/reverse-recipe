@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { query, randomUUID } from '../db';
-import { generateTokens } from '../middleware/auth';
+import { generateTokens, ACCESS_COOKIE_OPTS, REFRESH_COOKIE_OPTS, COOKIE_OPTIONS } from '../middleware/auth';
 
 const router = Router();
 
@@ -34,10 +34,10 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     const user = result.rows[0];
     const { accessToken, refreshToken } = generateTokens(user.id, user.email);
 
+    res.cookie('access_token', accessToken, ACCESS_COOKIE_OPTS);
+    res.cookie('refresh_token', refreshToken, REFRESH_COOKIE_OPTS);
     res.status(201).json({
       user: { id: user.id, email: user.email, name: user.name },
-      accessToken,
-      refreshToken,
     });
   } catch (error) {
     console.error('Register error:', error);
@@ -75,10 +75,10 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     const { accessToken, refreshToken } = generateTokens(user.id, user.email);
 
+    res.cookie('access_token', accessToken, ACCESS_COOKIE_OPTS);
+    res.cookie('refresh_token', refreshToken, REFRESH_COOKIE_OPTS);
     res.json({
       user: { id: user.id, email: user.email, name: user.name, preferences: user.preferences },
-      accessToken,
-      refreshToken,
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -99,9 +99,9 @@ router.post('/guest', async (_req: Request, res: Response): Promise<void> => {
 
     const { accessToken } = generateTokens(guestId, guestEmail);
 
+    res.cookie('access_token', accessToken, ACCESS_COOKIE_OPTS);
     res.json({
       user: { id: guestId, email: guestEmail, name: '게스트' },
-      accessToken,
       isGuest: true,
     });
   } catch (error) {
@@ -151,15 +151,22 @@ router.post('/kakao', async (req: Request, res: Response): Promise<void> => {
 
     const { accessToken, refreshToken } = generateTokens(user.rows[0].id, user.rows[0].email);
 
+    res.cookie('access_token', accessToken, ACCESS_COOKIE_OPTS);
+    res.cookie('refresh_token', refreshToken, REFRESH_COOKIE_OPTS);
     res.json({
       user: { id: user.rows[0].id, email: user.rows[0].email, name: user.rows[0].name },
-      accessToken,
-      refreshToken,
     });
   } catch (error) {
     console.error('Kakao login error:', error);
     res.status(500).json({ error: '카카오 로그인 중 오류가 발생했습니다.' });
   }
+});
+
+// POST /api/auth/logout — 쿠키 삭제
+router.post('/logout', (_req: Request, res: Response): void => {
+  res.clearCookie('access_token', { ...COOKIE_OPTIONS });
+  res.clearCookie('refresh_token', { ...COOKIE_OPTIONS });
+  res.json({ ok: true });
 });
 
 export default router;

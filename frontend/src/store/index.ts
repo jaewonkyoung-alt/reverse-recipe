@@ -74,12 +74,14 @@ export const useAppStore = create<AppState>()(
       // Auth
       user: null,
       accessToken: null,
-      setUser: (user, accessToken) => {
-        if (accessToken) localStorage.setItem('accessToken', accessToken);
-        set({ user, accessToken });
+      setUser: (user, _accessToken) => {
+        // 토큰은 서버가 httpOnly 쿠키로 관리. localStorage 직접 쓰기 중단.
+        set({ user, accessToken: null });
       },
       logout: () => {
-        localStorage.removeItem('accessToken');
+        // 쿠키 삭제를 서버에 요청한 뒤 로컬 상태 초기화
+        fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+        localStorage.removeItem('accessToken'); // 이전 버전 토큰 잔재 제거
         set({ user: null, accessToken: null, ingredients: [], recommendedRecipes: [] });
       },
 
