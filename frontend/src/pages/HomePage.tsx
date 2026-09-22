@@ -89,7 +89,7 @@ export default function HomePage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', width: '100%', maxWidth: '380px' }}>
                 {[
                   { title: '냉장고 관리', desc: '유통기한 자동 추적' },
-                  { title: 'AI 추천', desc: 'Perplexity AI 기반' },
+                  { title: 'AI 추천', desc: 'Gemini AI 기반' },
                   { title: '환경 점수', desc: '음식물 낭비 제로' },
                 ].map((feature) => (
                   <div
