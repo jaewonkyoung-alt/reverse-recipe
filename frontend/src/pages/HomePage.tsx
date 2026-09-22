@@ -59,7 +59,7 @@ export default function HomePage() {
     setIsLoadingGuest(true);
     try {
       const res = await authAPI.guestLogin();
-      setUser(res.data.user, res.data.accessToken);
+      setUser(res.data.user);
       toast.success('게스트로 시작합니다!');
     } catch {
       toast.error('게스트 로그인에 실패했습니다.');
