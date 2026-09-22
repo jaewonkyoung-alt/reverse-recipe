@@ -272,7 +272,7 @@ const MOCK_RECIPE_POOL: MockTemplate[] = [
 
 function getMockRecipes(userIngredients: string[] = []): Recipe[] {
   const has = (name: string) =>
-    userIngredients.some((i) => i.includes(name) || name.includes(i) || i === name);
+    userIngredients.some((i) => i === name || i.endsWith(name) || name.endsWith(i));
 
   const scored = MOCK_RECIPE_POOL.map((r) => {
     const matchCount = r.ingredient_list.filter((i) => has(i.name)).length;
@@ -381,7 +381,7 @@ async function callGeminiAPIWithIngredients(prompt: string, userIngredients: str
     // Recompute match_score / missing_ingredients based on actual user fridge
     return recipes.map((r) => {
       const has = (name: string) =>
-        userIngredients.some((i) => i.includes(name) || name.includes(i) || i === name);
+        userIngredients.some((i) => i === name || i.endsWith(name) || name.endsWith(i));
       const matchCount = r.ingredient_list.filter((i) => has(i.name)).length;
       const total = r.ingredient_list.length;
       return {
