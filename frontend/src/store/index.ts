@@ -5,8 +5,7 @@ import type { User, Ingredient, Recipe, ShoppingItem, GreenPointData, CookingSes
 interface AppState {
   // Auth
   user: User | null;
-  accessToken: string | null;
-  setUser: (user: User | null, token: string | null) => void;
+  setUser: (user: User | null) => void;
   logout: () => void;
 
   // Ingredients (Fridge)
@@ -73,16 +72,14 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       // Auth
       user: null,
-      accessToken: null,
-      setUser: (user, _accessToken) => {
-        // 토큰은 서버가 httpOnly 쿠키로 관리. localStorage 직접 쓰기 중단.
-        set({ user, accessToken: null });
+      setUser: (user) => {
+        set({ user });
       },
       logout: () => {
         // 쿠키 삭제를 서버에 요청한 뒤 로컬 상태 초기화
         fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
         localStorage.removeItem('accessToken'); // 이전 버전 토큰 잔재 제거
-        set({ user: null, accessToken: null, ingredients: [], recommendedRecipes: [] });
+        set({ user: null, ingredients: [], recommendedRecipes: [] });
       },
 
       // Ingredients
@@ -188,7 +185,6 @@ export const useAppStore = create<AppState>()(
       name: 'reverse-recipe-storage',
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
         ingredients: state.ingredients,
         savedRecipes: state.savedRecipes,
         darkMode: state.darkMode,

@@ -51,7 +51,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const res = await authAPI.login({ email: email.trim(), password });
-      setUser(res.data.user, res.data.accessToken);
+      setUser(res.data.user);
       toast.success(`${res.data.user.name}님, 환영합니다!`);
       navigate('/');
     } catch (err: unknown) {
@@ -84,7 +84,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const res = await authAPI.register({ email: email.trim(), name: name.trim(), password });
-      setUser(res.data.user, res.data.accessToken);
+      setUser(res.data.user);
       toast.success('회원가입 완료! 환영합니다 🎉');
       navigate('/');
     } catch (err: unknown) {
