@@ -5,19 +5,8 @@ import html2canvas from 'html2canvas';
 import { useAppStore } from '../store';
 import { recipeAPI, shoppingAPI, ingredientAPI } from '../services/api';
 import { CUISINE_LABELS, TYPE_LABELS, DIFFICULTY_LABELS } from '../types';
-import type { Recipe } from '../types';
 import CookingTimer from '../components/CookingTimer';
 import toast from 'react-hot-toast';
-
-function estimateCalories(recipe: Recipe): number {
-  const base: Record<string, number> = {
-    Main: 580, Side: 270, Soup: 200, Snack: 220, Dessert: 310,
-  };
-  const b = base[recipe.recipe_type] ?? 400;
-  const hash = recipe.recipe_title.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const variance = (hash % 201) - 100;
-  return Math.round((b + variance) / 10) * 10;
-}
 
 export default function RecipeDetailPage() {
   const navigate = useNavigate();
@@ -209,7 +198,7 @@ export default function RecipeDetailPage() {
       <div ref={shareCardRef}>
         <div className="rounded-3xl p-6" style={{ background: 'linear-gradient(135deg, #F97316, #EA580C)' }}>
           <div className="flex flex-wrap gap-x-2 gap-y-2 mb-4">
-            {[CUISINE_LABELS[recipe.cuisine_type], TYPE_LABELS[recipe.recipe_type], DIFFICULTY_LABELS[recipe.difficulty], `⏱️ ${recipe.estimated_total_time_minutes}분`, `~${estimateCalories(recipe)} kcal`].map((tag) => (
+            {[CUISINE_LABELS[recipe.cuisine_type], TYPE_LABELS[recipe.recipe_type], DIFFICULTY_LABELS[recipe.difficulty], `⏱️ ${recipe.estimated_total_time_minutes}분`].map((tag) => (
               <span key={tag} className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/20 text-white">{tag}</span>
             ))}
           </div>
