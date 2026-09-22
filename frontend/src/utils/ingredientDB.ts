@@ -176,9 +176,10 @@ export function getExpirationDays(
   if (INGREDIENT_EXPIRATION_DB[name] !== undefined) {
     return INGREDIENT_EXPIRATION_DB[name];
   }
-  // 부분 일치 검색
-  for (const [key, days] of Object.entries(INGREDIENT_EXPIRATION_DB)) {
-    if (name.includes(key) || key.includes(name)) return days;
+  // 우측 최장일치: 키를 길이 내림차순 정렬 후 endsWith 검사
+  const sortedExpEntries = Object.entries(INGREDIENT_EXPIRATION_DB).sort((a, b) => b[0].length - a[0].length);
+  for (const [key, days] of sortedExpEntries) {
+    if (name.endsWith(key)) return days;
   }
   // 카테고리 기본값
   const defaults: Record<IngredientCategory, number> = {
@@ -191,8 +192,9 @@ export function getExpirationDays(
 /** 이름으로 카테고리 자동 감지 */
 export function detectCategory(name: string): IngredientCategory | null {
   if (INGREDIENT_CATEGORY_DB[name]) return INGREDIENT_CATEGORY_DB[name];
-  for (const [key, cat] of Object.entries(INGREDIENT_CATEGORY_DB)) {
-    if (name.includes(key) || key.includes(name)) return cat;
+  const sortedCatEntries = Object.entries(INGREDIENT_CATEGORY_DB).sort((a, b) => b[0].length - a[0].length);
+  for (const [key, cat] of sortedCatEntries) {
+    if (name.endsWith(key)) return cat;
   }
   return null;
 }

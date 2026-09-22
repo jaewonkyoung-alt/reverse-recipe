@@ -39,8 +39,9 @@ export function calculateExpirationDate(name: string, category: IngredientCatego
   let days = INGREDIENT_EXPIRATION_DB[name];
   // 부분 일치
   if (days === undefined) {
-    for (const [key, d] of Object.entries(INGREDIENT_EXPIRATION_DB)) {
-      if (name.includes(key) || key.includes(name)) { days = d; break; }
+    const sortedKeys = Object.keys(INGREDIENT_EXPIRATION_DB).sort((a, b) => b.length - a.length);
+    for (const key of sortedKeys) {
+      if (name.endsWith(key)) { days = INGREDIENT_EXPIRATION_DB[key]; break; }
     }
   }
   // 카테고리 기본값
