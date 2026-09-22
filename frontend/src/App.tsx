@@ -6,7 +6,6 @@ import FridgePage from './pages/FridgePage';
 import RecommendPage from './pages/RecommendPage';
 import RecipeDetailPage from './pages/RecipeDetailPage';
 import ShoppingPage from './pages/ShoppingPage';
-import ProfilePage from './pages/ProfilePage';
 import MyRipePage from './pages/MyRipePage';
 import LoginPage from './pages/LoginPage';
 
@@ -35,7 +34,7 @@ function App() {
         <Route path="/recommend" element={<Layout><RecommendPage /></Layout>} />
         <Route path="/recipe/:id" element={<Layout><RecipeDetailPage /></Layout>} />
         <Route path="/shopping" element={<Layout><ShoppingPage /></Layout>} />
-        <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
+        <Route path="/profile" element={<Layout><MyRipePage /></Layout>} />
         <Route path="/myripe" element={<Layout><MyRipePage /></Layout>} />
         <Route path="/login" element={<Layout><LoginPage /></Layout>} />
       </Routes>
