@@ -1,11 +1,11 @@
-import { query, randomUUID } from '../db';
+import { kyselyDb, randomUUID } from '../db';
 import type { Ingredient, IngredientCategory, ExpirationUrgency } from '../types';
 import { INGREDIENT_EXPIRATION_DB, CATEGORY_DEFAULTS } from '../data/ingredientExpirationDB';
 
 export function calculateExpirationDate(name: string, category: IngredientCategory): Date {
   // 정확히 일치
   let days = INGREDIENT_EXPIRATION_DB[name];
-  // 부분 일치
+  // 부분 일치 (우측 최장일치)
   if (days === undefined) {
     const sortedKeys = Object.keys(INGREDIENT_EXPIRATION_DB).sort((a, b) => b.length - a.length);
     for (const key of sortedKeys) {
@@ -42,22 +42,29 @@ export function getExpirationUrgency(expirationDate: Date): ExpirationUrgency {
 }
 
 export async function getAllIngredients(userId: string): Promise<Ingredient[]> {
-  const result = await query(
-    'SELECT * FROM ingredients WHERE user_id = $1 ORDER BY expiration_date ASC',
-    [userId]
-  );
-  return result.rows;
+  const rows = await kyselyDb
+    .selectFrom('ingredients')
+    .selectAll()
+    .where('user_id', '=', userId)
+    .orderBy('expiration_date', 'asc')
+    .execute();
+  return rows as unknown as Ingredient[];
 }
 
 export async function getExpiringIngredients(userId: string, daysThreshold = 3): Promise<Ingredient[]> {
-  const result = await query(
-    `SELECT * FROM ingredients
-     WHERE user_id = $1
-     AND expiration_date <= NOW() + INTERVAL '${daysThreshold} days'
-     ORDER BY expiration_date ASC`,
-    [userId]
-  );
-  return result.rows;
+  // 날짜 계산을 JS에서 수행해 바운드 파라미터로 전달 (SQL 인터폴레이션 없음)
+  const threshold = new Date();
+  threshold.setDate(threshold.getDate() + daysThreshold);
+  const thresholdStr = threshold.toISOString();
+
+  const rows = await kyselyDb
+    .selectFrom('ingredients')
+    .selectAll()
+    .where('user_id', '=', userId)
+    .where('expiration_date', '<=', thresholdStr)
+    .orderBy('expiration_date', 'asc')
+    .execute();
+  return rows as unknown as Ingredient[];
 }
 
 export async function addIngredient(
@@ -73,13 +80,20 @@ export async function addIngredient(
   const expDate = data.expiration_date || calculateExpirationDate(data.name, data.category);
   const expDateStr = expDate instanceof Date ? expDate.toISOString() : expDate;
 
-  const result = await query(
-    `INSERT INTO ingredients (id, user_id, name, quantity, unit, category, expiration_date)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING *`,
-    [randomUUID(), userId, data.name, data.quantity || null, data.unit || null, data.category, expDateStr]
-  );
-  return result.rows[0];
+  const row = await kyselyDb
+    .insertInto('ingredients')
+    .values({
+      id: randomUUID(),
+      user_id: userId,
+      name: data.name,
+      quantity: data.quantity ?? null,
+      unit: data.unit ?? null,
+      category: data.category,
+      expiration_date: expDateStr,
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  return row as unknown as Ingredient;
 }
 
 export async function updateIngredient(
@@ -93,34 +107,39 @@ export async function updateIngredient(
     expiration_date: Date;
   }>
 ): Promise<Ingredient | null> {
-  const fields: string[] = [];
-  const values: unknown[] = [];
-  let idx = 1;
+  const updates: Record<string, unknown> = {};
 
-  if (data.name !== undefined) { fields.push(`name = $${idx++}`); values.push(data.name); }
-  if (data.quantity !== undefined) { fields.push(`quantity = $${idx++}`); values.push(data.quantity); }
-  if (data.unit !== undefined) { fields.push(`unit = $${idx++}`); values.push(data.unit); }
-  if (data.category !== undefined) { fields.push(`category = $${idx++}`); values.push(data.category); }
-  if (data.expiration_date !== undefined) { fields.push(`expiration_date = $${idx++}`); values.push(data.expiration_date instanceof Date ? data.expiration_date.toISOString() : data.expiration_date); }
+  if (data.name !== undefined) updates.name = data.name;
+  if (data.quantity !== undefined) updates.quantity = data.quantity;
+  if (data.unit !== undefined) updates.unit = data.unit;
+  if (data.category !== undefined) updates.category = data.category;
+  if (data.expiration_date !== undefined) {
+    updates.expiration_date = data.expiration_date instanceof Date
+      ? data.expiration_date.toISOString()
+      : data.expiration_date;
+  }
 
-  if (fields.length === 0) return null;
+  if (Object.keys(updates).length === 0) return null;
 
-  fields.push(`updated_at = NOW()`);
-  values.push(id, userId);
+  updates.updated_at = new Date().toISOString();
 
-  const result = await query(
-    `UPDATE ingredients SET ${fields.join(', ')} WHERE id = $${idx++} AND user_id = $${idx} RETURNING *`,
-    values
-  );
-  return result.rows[0] || null;
+  const row = await kyselyDb
+    .updateTable('ingredients')
+    .set(updates)
+    .where('id', '=', id)
+    .where('user_id', '=', userId)
+    .returningAll()
+    .executeTakeFirst();
+  return row ? (row as unknown as Ingredient) : null;
 }
 
 export async function deleteIngredient(id: string, userId: string): Promise<boolean> {
-  const result = await query(
-    'DELETE FROM ingredients WHERE id = $1 AND user_id = $2',
-    [id, userId]
-  );
-  return (result.rowCount || 0) > 0;
+  const result = await kyselyDb
+    .deleteFrom('ingredients')
+    .where('id', '=', id)
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+  return (result.numDeletedRows ?? BigInt(0)) > BigInt(0);
 }
 
 export async function deductIngredients(
@@ -128,33 +147,50 @@ export async function deductIngredients(
   usedIngredients: Array<{ name: string; quantity?: number }>
 ): Promise<void> {
   for (const used of usedIngredients) {
-    // Find matching ingredient (exact name first, then partial)
-    let result = await query(
-      'SELECT * FROM ingredients WHERE user_id = $1 AND name = $2 LIMIT 1',
-      [userId, used.name]
-    );
-    if (result.rows.length === 0) {
-      result = await query(
-        'SELECT * FROM ingredients WHERE user_id = $1 AND name ILIKE $2 LIMIT 1',
-        [userId, `%${used.name}%`]
-      );
+    // 정확 일치 먼저, 없으면 부분 일치
+    let ing = await kyselyDb
+      .selectFrom('ingredients')
+      .selectAll()
+      .where('user_id', '=', userId)
+      .where('name', '=', used.name)
+      .limit(1)
+      .executeTakeFirst();
+
+    if (!ing) {
+      ing = await kyselyDb
+        .selectFrom('ingredients')
+        .selectAll()
+        .where('user_id', '=', userId)
+        .where('name', 'like', `%${used.name}%`)
+        .limit(1)
+        .executeTakeFirst();
     }
-    const ing = result.rows[0];
+
     if (!ing) continue;
 
     if (used.quantity && ing.quantity !== null && ing.quantity !== undefined) {
-      const remaining = parseFloat(ing.quantity) - used.quantity;
+      const remaining = ing.quantity - used.quantity;
       if (remaining <= 0) {
-        await query('DELETE FROM ingredients WHERE id = $1 AND user_id = $2', [ing.id, userId]);
+        await kyselyDb
+          .deleteFrom('ingredients')
+          .where('id', '=', ing.id)
+          .where('user_id', '=', userId)
+          .execute();
       } else {
-        await query(
-          'UPDATE ingredients SET quantity = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3',
-          [remaining, ing.id, userId]
-        );
+        await kyselyDb
+          .updateTable('ingredients')
+          .set({ quantity: remaining, updated_at: new Date().toISOString() })
+          .where('id', '=', ing.id)
+          .where('user_id', '=', userId)
+          .execute();
       }
     } else {
-      // No quantity info — remove the ingredient entirely
-      await query('DELETE FROM ingredients WHERE id = $1 AND user_id = $2', [ing.id, userId]);
+      // 수량 정보 없으면 재료 전체 삭제
+      await kyselyDb
+        .deleteFrom('ingredients')
+        .where('id', '=', ing.id)
+        .where('user_id', '=', userId)
+        .execute();
     }
   }
 }

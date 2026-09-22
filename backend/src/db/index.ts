@@ -1,7 +1,107 @@
 import Database from 'better-sqlite3';
+import { Kysely, SqliteDialect, type Generated, type Insertable, type Selectable, type Updateable } from 'kysely';
 import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
+
+// ─── Kysely 스키마 타입 ────────────────────────────────────────────────────────
+
+export interface UsersTable {
+  id: string;
+  email: string | null;
+  name: string;
+  password_hash: string | null;
+  kakao_id: string | null;
+  preferences: string;
+  created_at: Generated<string>;
+  updated_at: Generated<string>;
+}
+
+export interface IngredientsTable {
+  id: string;
+  user_id: string;
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  category: string;
+  expiration_date: string;
+  created_at: Generated<string>;
+  updated_at: Generated<string>;
+}
+
+export interface RecipeCacheTable {
+  id: string;
+  cache_key: string;
+  recipe_data: string;
+  created_at: Generated<string>;
+  expires_at: string | null;
+}
+
+export interface RecipeHistoryTable {
+  id: string;
+  user_id: string;
+  recipe_data: string;
+  completed: Generated<number>;
+  completed_at: string | null;
+  created_at: Generated<string>;
+}
+
+export interface ShoppingListTable {
+  id: string;
+  user_id: string;
+  ingredient_name: string;
+  quantity: number | null;
+  unit: string | null;
+  recipe_title: string | null;
+  is_purchased: Generated<number>;
+  created_at: Generated<string>;
+}
+
+export interface GreenPointsTable {
+  id: string;
+  user_id: string;
+  ingredient_name: string | null;
+  points_earned: Generated<number>;
+  reason: string | null;
+  earned_at: Generated<string>;
+}
+
+export interface PurchaseImportsTable {
+  id: string;
+  user_id: string;
+  platform: string | null;
+  raw_product_name: string | null;
+  parsed_ingredient: string | null;
+  quantity: number | null;
+  unit: string | null;
+  imported_at: Generated<string>;
+}
+
+export interface EmailVerificationsTable {
+  id: string;
+  email: string;
+  code: string;
+  expires_at: string;
+  verified: Generated<number>;
+  created_at: Generated<string>;
+}
+
+export interface KyselyDatabase {
+  users: UsersTable;
+  ingredients: IngredientsTable;
+  recipe_cache: RecipeCacheTable;
+  recipe_history: RecipeHistoryTable;
+  shopping_list: ShoppingListTable;
+  green_points: GreenPointsTable;
+  purchase_imports: PurchaseImportsTable;
+  email_verifications: EmailVerificationsTable;
+}
+
+// Selectable/Insertable/Updateable 편의 타입
+export type IngredientRow = Selectable<IngredientsTable>;
+export type NewIngredient = Insertable<IngredientsTable>;
+export type IngredientUpdate = Updateable<IngredientsTable>;
+export type UserRow = Selectable<UsersTable>;
 
 // data 폴더 생성
 const dataDir = path.join(__dirname, '../../../data');
@@ -128,6 +228,11 @@ db.exec(`
 
 export { randomUUID };
 export default db;
+
+// ─── Kysely 인스턴스 (타입 안전 쿼리빌더) ─────────────────────────────────────
+export const kyselyDb = new Kysely<KyselyDatabase>({
+  dialect: new SqliteDialect({ database: db }),
+});
 
 /**
  * pg 호환 query 인터페이스
