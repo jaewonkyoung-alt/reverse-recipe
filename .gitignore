@@ -37,3 +37,6 @@ data/
 
 # autoteam 실행 로그
 .autoteam/logs/
+
+# 타입체크 기준선 (머신별)
+.autoteam/.typecheck-baseline

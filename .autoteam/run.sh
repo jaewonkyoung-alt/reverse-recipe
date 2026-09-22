@@ -81,10 +81,32 @@ loop_with_review() {
 $last" \
       "$LOG/${role}-r${round}.md"
 
+    # ── 검증 게이트 ──────────────────────────────────────────────
+    # 봇의 "검증: 실행 안 함" 자기보고를 믿지 않고 스크립트가 직접 돌린다.
+    # 타입 에러가 늘었으면 평가자를 부르지 않고 바로 반려한다 (비용 절약).
+    VERIFY_OUT=""
+    if [ "$role" = "프로그래머" ] && [ "$DRY" -eq 0 ]; then
+      say "타입체크 — 스크립트가 직접 실행"
+      if VERIFY_OUT="$("$HERE/verify.sh" check 2>&1)"; then
+        note "$(printf '%s' "$VERIFY_OUT" | head -1)"
+      else
+        note "$(printf '%s' "$VERIFY_OUT" | head -1)"
+        note "타입 에러 증가 — 평가자 생략하고 반려한다."
+        last="타입체크 실패. 아래 에러를 고쳐라. 이건 스크립트가 직접 실행한 결과다.
+
+$VERIFY_OUT"
+        round=$((round+1))
+        continue
+      fi
+    fi
+
     say "평가자 — $role 결과 검증 ($round/$MAX_ROUNDS)"
     invoke "평가자" "evaluator.md" \
       "현재 라운드: $round/$MAX_ROUNDS
 검증 대상: $role
+
+### 스크립트가 직접 실행한 타입체크 결과 (봇 자기보고가 아님)
+${VERIFY_OUT:-해당 없음}
 
 ### $role 의 이번 라운드 보고
 $(cat "$LOG/${role}-r${round}.md" 2>/dev/null)" \
