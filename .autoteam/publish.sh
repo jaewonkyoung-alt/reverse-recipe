@@ -42,12 +42,15 @@ push)
   printf '  %s\n' "${DELTA[@]}"
 
   # ── 비밀값 스캔 ──────────────────────────────────────────────
+  # grep 정규식은 시스템 grep(ugrep)에서 complexity limit 으로 조용히 죽는다.
+  # 에러가 나도 종료코드가 0이라 "깨끗함"으로 통과해버리므로 파이썬으로 한다.
   LEAK=0
   for f in "${DELTA[@]}"; do
     [ -f "$f" ] || continue
-    case "$f" in *.env|*.env.*|*/.env) echo "!! 중단: $f 는 환경파일"; LEAK=1; continue;; esac
-    if grep -qE '(AIza[0-9A-Za-z_-]{35}|gh[pousr]_[0-9A-Za-z]{36}|xai-[0-9A-Za-z]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)' "$f" 2>/dev/null; then
-      echo "!! 중단: $f 에 비밀값으로 보이는 문자열"
+    case "$f" in
+      *.env|*.env.*|*/.env) echo "!! 중단: $f 는 환경파일"; LEAK=1; continue ;;
+    esac
+    if ! python3 "$HERE/parse.py" scan "$f"; then
       LEAK=1
     fi
   done
