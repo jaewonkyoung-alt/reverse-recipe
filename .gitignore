@@ -34,3 +34,6 @@ npm-debug.log*
 # Claude Code 설정 (로컬 전용)
 .claude/
 data/
+
+# autoteam 실행 로그
+.autoteam/logs/

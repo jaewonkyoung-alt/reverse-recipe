@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["PASS", "REJECT", "ESCALATE"],
+      "description": "PASS=P1 없음. REJECT=P1 있어 재작업. ESCALATE=사람 판단 필요"
+    },
+    "summary": { "type": "string", "description": "판정 이유 1~2문장" },
+    "scores": {
+      "type": "object",
+      "properties": {
+        "ui_ux": { "type": "integer" },
+        "security": { "type": "integer" },
+        "ai_quality": { "type": "integer" },
+        "release_readiness": { "type": "integer" },
+        "feature_completeness": { "type": "integer" }
+      }
+    },
+    "p1": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "problem": { "type": "string" },
+          "location": { "type": "string", "description": "파일:라인" },
+          "why": { "type": "string", "description": "왜 P1인지" },
+          "fix": { "type": "string", "description": "수정 방향" }
+        },
+        "required": ["problem", "location", "fix"]
+      }
+    },
+    "backlog": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "P2/P3 — BACKLOG.md 등재 대상 제목"
+    }
+  },
+  "required": ["verdict", "summary", "p1"]
+}
