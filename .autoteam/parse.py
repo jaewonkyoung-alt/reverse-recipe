@@ -3,10 +3,26 @@
 import json, sys
 
 def load(path):
+    """grok 은 {structuredOutput:{...}} 를, Claude 폴백은 평가 JSON 을 그대로 낸다.
+    둘 다 받아 같은 모양으로 돌려준다."""
     try:
-        return json.load(open(path))
+        raw = open(path, encoding="utf-8", errors="replace").read()
     except Exception:
         return {}
+    try:
+        d = json.loads(raw)
+    except Exception:
+        import re
+        m = re.search(r"\{.*\}", raw, re.S)
+        if not m:
+            return {}
+        try:
+            d = json.loads(m.group(0))
+        except Exception:
+            return {}
+    if isinstance(d, dict) and "structuredOutput" not in d and "verdict" in d:
+        return {"structuredOutput": d, "total_cost_usd": 0}
+    return d if isinstance(d, dict) else {}
 
 # 커밋 전 비밀값 스캔.
 # 주의: Google API 키는 형식이 둘이다. 구형 AIza...(39자)와
