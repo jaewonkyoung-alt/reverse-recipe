@@ -113,6 +113,22 @@ $(cat "$LOG/${role}-r${round}.md" 2>/dev/null)" \
       "$LOG/평가자-${role}-r${round}.md"
 
     v="$(verdict_of "$LOG/평가자-${role}-r${round}.md")"
+    # 에이전틱 취소 등으로 structuredOutput 이 비면 한 번 더 시도한다.
+    if [ -z "$v" ] && [ "$DRY" -eq 0 ]; then
+      note "구조화 출력 없음 — 평가자 1회 재시도"
+      invoke "평가자" "evaluator.md" \
+        "현재 라운드: $round/$MAX_ROUNDS
+검증 대상: $role
+주의: 파일을 더 읽지 말고 아래 정보만으로 즉시 판정하라.
+
+### 스크립트가 직접 실행한 타입체크 결과
+${VERIFY_OUT:-해당 없음}
+
+### $role 의 보고
+$(cat "$LOG/${role}-r${round}.md" 2>/dev/null)" \
+        "$LOG/평가자-${role}-r${round}-retry.md"
+      v="$(verdict_of "$LOG/평가자-${role}-r${round}-retry.md")"
+    fi
     note "판정: ${v:-파싱실패}  (비용 \$$(cost_of "$LOG/평가자-${role}-r${round}.md"))"
 
     case "${v:-}" in

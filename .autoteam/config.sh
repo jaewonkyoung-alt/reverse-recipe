@@ -28,8 +28,11 @@ role_programmer() {
 GROK_BIN="${GROK_BIN:-$HOME/.grok/bin/grok}"
 # zsh 에서 source 될 때 BASH_SOURCE 가 비므로 절대경로로 고정한다.
 EVAL_SCHEMA="$PROJECT_ROOT/.autoteam/evaluator-schema.json"
+# --max-turns: 에이전틱으로 파일을 계속 읽다 취소되면
+# structuredOutput 이 null 로 오고 판정을 못 읽는다 (실제 발생: 7턴 후 cancelled).
+# 평가에 필요한 만큼만 읽도록 제한한다.
 role_evaluator() {
-  "$GROK_BIN" -p "$1" --json-schema "$(cat "$EVAL_SCHEMA")"
+  "$GROK_BIN" -p "$1" --json-schema "$(cat "$EVAL_SCHEMA")" --max-turns 4
 }
 
 # ── 재무부: RELEASE.md 등 문서를 써야 하므로 편집 권한 필요.
