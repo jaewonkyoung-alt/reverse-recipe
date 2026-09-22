@@ -102,7 +102,6 @@ export interface GreenPointData {
 export interface PlatformOption {
   platform: 'coupang' | 'naver' | 'kurly';
   name: string;
-  price: number;
   url: string;
   thumbnail_url?: string;
 }

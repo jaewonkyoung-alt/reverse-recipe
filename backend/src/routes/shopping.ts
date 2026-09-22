@@ -136,7 +136,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
   }
 });
 
-// POST /api/shopping/search — Platform price comparison (Phase 3)
+// POST /api/shopping/search — Platform search links (Phase 3: real price lookup not yet implemented)
 router.post('/search', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { ingredients } = req.body as { ingredients: string[] };
@@ -146,41 +146,28 @@ router.post('/search', async (req: AuthRequest, res: Response): Promise<void> =>
       return;
     }
 
-    // Deterministic price seeding based on ingredient name hash
-    const seededRandom = (seed: string): number => {
-      let hash = 2166136261;
-      for (let i = 0; i < seed.length; i++) {
-        hash ^= seed.charCodeAt(i);
-        hash = (hash * 16777619) >>> 0;
-      }
-      return (hash % 10000) / 10000;
-    };
-
     const results = ingredients.map((ingredient) => ({
       ingredient,
       options: [
         {
           platform: 'coupang',
           name: `${ingredient} (쿠팡)`,
-          price: Math.floor(seededRandom(ingredient + '_coupang') * 4000) + 2000,
           url: `https://www.coupang.com/search?q=${encodeURIComponent(ingredient)}`,
           thumbnail_url: null,
         },
         {
           platform: 'naver',
           name: `${ingredient} (네이버쇼핑)`,
-          price: Math.floor(seededRandom(ingredient + '_naver') * 3500) + 1800,
           url: `https://search.shopping.naver.com/search/all?query=${encodeURIComponent(ingredient)}`,
           thumbnail_url: null,
         },
         {
           platform: 'kurly',
           name: `${ingredient} (마켓컬리)`,
-          price: Math.floor(seededRandom(ingredient + '_kurly') * 4500) + 2500,
           url: `https://www.kurly.com/search?sword=${encodeURIComponent(ingredient)}`,
           thumbnail_url: null,
         },
-      ].sort((a, b) => a.price - b.price), // 가격 낮은 순 정렬
+      ],
     }));
 
     res.json({ results });
